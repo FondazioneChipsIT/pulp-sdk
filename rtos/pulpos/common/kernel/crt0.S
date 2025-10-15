@@ -44,7 +44,6 @@ label0:
 #endif
 
 
-
     # Clear the bss segment
     la      t0, _bss_start
     la      t1, _bss_end
