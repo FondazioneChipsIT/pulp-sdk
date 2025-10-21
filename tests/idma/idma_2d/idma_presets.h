@@ -1,5 +1,5 @@
 
-TransferParameters idma_presets[] = {
+transfer_2d idma_presets[] = {
 {1, 1, 1, 1},
 {2, 2, 512, 512},
 {4, 2, 256, 256},

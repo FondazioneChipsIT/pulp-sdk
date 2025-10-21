@@ -84,18 +84,18 @@ void idma_task() {
     PRINTF ("Core[%d] has entered idma_task \n", pi_core_id());
     transfer_2d transfer;
     uint32_t transfers_num;
-    // #ifdef QUICK_MODE
-    // transfers_num = NB_PRESETS;
-    // #else
+    #ifdef QUICK_MODE
+    transfers_num = NB_PRESETS;
+    #else
     transfers_num = NB_TRANSFERS;
-    // #endif
+    #endif
     
     for (int k = 0; k < transfers_num; k ++) {
-        // #ifdef QUICK_MODE
-        // transfer = idma_presets[k];
-        // #else
+        #ifdef QUICK_MODE
+        transfer = idma_presets[k];
+        #else
         transfer = params_2d[k];
-        // #endif
+        #endif
         print_transfer(transfer);
         // L1 -> L2
         glob_errors += idma_2D(transfer, pi_core_id(), 0, 0);

@@ -58,7 +58,6 @@ int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
 void idma_task() {
     PRINTF ("Core[%d] has entered idma_task \n", pi_core_id());
     uint32_t size;
-    transfer_1d transfer;
     uint32_t transfers_num;
     #ifdef QUICK_MODE
     transfers_num = NB_PRESETS;
@@ -67,7 +66,7 @@ void idma_task() {
     #endif
     for (int k = 0; k < transfers_num; k ++) {
         #ifdef QUICK_MODE
-        size = idma_presets[k];
+        size = idma_presets[k].size_1d;
         #else
         size = params_1d[k].size_1d;
         #endif
