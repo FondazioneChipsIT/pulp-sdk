@@ -9,21 +9,21 @@ uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
 uint32_t l1_dst_addr[8] = {0};
 
-void print_transfer (TransferParameters transfer) {
+void print_transfer (transfer_2d transfer) {
     PRINTF ("Core[%d] => Transfer Parameters | Size: %d | Length: %d | Src_stride_2d: %d | Dst_stride_2d: %d \n", 
-            pi_core_id(), transfer.size,
-            transfer.length, transfer.src_stride, transfer.dst_stride);
+            pi_core_id(), transfer.size_2d,
+            transfer.length, transfer.src_stride_2d, transfer.dst_stride_2d);
 }
 
-int idma_2D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc) {
+int idma_2D (transfer_2d transfer, int core_id, int ext2loc, int loc2loc) {
     volatile uint8_t *src_ptr, *dst_ptr;
 
     int error = 0;
     int offset_2d;
 
-    uint32_t src_stride = transfer.src_stride;
-    uint32_t dst_stride = transfer.dst_stride;
-    uint32_t size = transfer.size;
+    uint32_t src_stride = transfer.src_stride_2d;
+    uint32_t dst_stride = transfer.dst_stride_2d;
+    uint32_t size = transfer.size_2d;
     uint32_t length = transfer.length;
     uint32_t num_reps = size/length;
 
@@ -82,20 +82,20 @@ int idma_2D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc)
 
 void idma_task() {
     PRINTF ("Core[%d] has entered idma_task \n", pi_core_id());
-    TransferParameters transfer;
+    transfer_2d transfer;
     uint32_t transfers_num;
-    #ifdef QUICK_MODE
-    transfers_num = NB_PRESETS;
-    #else
+    // #ifdef QUICK_MODE
+    // transfers_num = NB_PRESETS;
+    // #else
     transfers_num = NB_TRANSFERS;
-    #endif
+    // #endif
     
     for (int k = 0; k < transfers_num; k ++) {
-        #ifdef QUICK_MODE
-        transfer = idma_presets[k];
-        #else
-        transfer = transfer_params[k];
-        #endif
+        // #ifdef QUICK_MODE
+        // transfer = idma_presets[k];
+        // #else
+        transfer = params_2d[k];
+        // #endif
         print_transfer(transfer);
         // L1 -> L2
         glob_errors += idma_2D(transfer, pi_core_id(), 0, 0);

@@ -9,14 +9,14 @@ uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
 uint32_t l1_dst_addr[8] = {0};
 
-void print_transfer (TransferParameters transfer) {
+void print_transfer (transfer_3d transfer) {
     PRINTF ("Core[%d] => Transfer Parameters | Size: %d | Length: %d | Src_stride_2d: %d | Dst_stride_2d: %d | Src_stride_3d: %d | Dst_stride_3d: %d | Num_reps_3d: %d \n", 
-            pi_core_id(), transfer.size, transfer.length,
+            pi_core_id(), transfer.size_3d, transfer.length,
             transfer.src_stride_2d, transfer.dst_stride_2d, transfer.src_stride_3d,
             transfer.dst_stride_3d, transfer.num_reps_3d);
 }
 
-int idma_3D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc) {
+int idma_3D (transfer_3d transfer, int core_id, int ext2loc, int loc2loc) {
     volatile uint8_t *src_ptr, *dst_ptr;
     unsigned int offset_3d = 0;
     unsigned int offset_2d = 0;
@@ -27,7 +27,7 @@ int idma_3D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc)
     uint32_t dst_stride_2d = transfer.dst_stride_2d;
     uint32_t src_stride_3d = transfer.src_stride_3d;
     uint32_t dst_stride_3d = transfer.dst_stride_3d;
-    uint32_t size = transfer.size;
+    uint32_t size = transfer.size_3d;
     uint32_t length = transfer.length;
     uint32_t num_reps = size/length;
     uint32_t num_reps_3d = transfer.num_reps_3d;
@@ -104,20 +104,20 @@ int idma_3D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc)
 
 void idma_task() {
     PRINTF ("Core[%d] has entered idma_task \n", pi_core_id());
-    TransferParameters transfer;
+    transfer_3d transfer;
     uint32_t transfers_num;
-    #ifdef QUICK_MODE
-    transfers_num = NB_PRESETS;
-    #else
+    // #ifdef QUICK_MODE
+    // transfers_num = NB_PRESETS;
+    // #else
     transfers_num = NB_TRANSFERS;
-    #endif
+    // #endif
 
     for (int k = 0; k < transfers_num; k ++) {
-        #ifdef QUICK_MODE
-        transfer = idma_presets[k];
-        #else
-        transfer = transfer_params[k];
-        #endif
+        // #ifdef QUICK_MODE
+        // transfer = idma_presets[k];
+        // #else
+        transfer = params_3d[k];
+        // #endif
         print_transfer(transfer);
         // L1 -> L2
         glob_errors += idma_3D(transfer, pi_core_id(), 0, 0);

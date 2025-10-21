@@ -1,9 +1,9 @@
 #include "pmsis.h"
 #include "stdio.h"
 
-#include "idma_parameters.h"
-#include "idma_presets.h"
-#include "idma_defines.h"
+#include "idma_def_3d.h"
+#include "idma_param_3d.h"
+// #include "idma_presets.h"
 
 #ifndef _DMA_FRONTEND_REG_DEFS_
 #define _DMA_FRONTEND_REG_DEFS_
