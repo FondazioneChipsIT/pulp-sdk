@@ -143,21 +143,21 @@ def gen_stim_3d(f_param, f_def, testcase):
 
 if (testcase == '1D'):
     print ("Generating stimuli for 1D case")
-    f_param_1d = open('idma_1d/idma_param_1d.h', 'w')
-    f_def_1d = open('idma_1d/idma_def_1d.h', 'w')
+    f_param_1d = open('idma_param_1d.h', 'w')
+    f_def_1d = open('idma_def_1d.h', 'w')
     gen_stim_1d(f_param_1d, f_def_1d, testcase)
 elif (testcase == '2D'):
     print ("Generating stimuli for 2D case")
-    f_param_2d = open('idma_2d/idma_param_2d.h', 'w')
-    f_def_2d = open('idma_2d/idma_def_2d.h', 'w')
+    f_param_2d = open('idma_param_2d.h', 'w')
+    f_def_2d = open('idma_def_2d.h', 'w')
     gen_stim_2d(f_param_2d, f_def_2d, testcase)
 elif (testcase == '3D'):
     print ("Generating stimuli for 3D case")
-    f_param_3d = open('idma_3d/idma_param_3d.h', 'w')
-    f_def_3d = open('idma_3d/idma_def_3d.h', 'w')
+    f_param_3d = open('idma_param_3d.h', 'w')
+    f_def_3d = open('idma_def_3d.h', 'w')
     gen_stim_3d(f_param_3d, f_def_3d, testcase)
 else:
     print ("No testcase specified --> generating stimuli for 1d case")
-    f_param_1d = open('idma_1d/idma_param_1d.h', 'w')
-    f_def_1d = open('idma_1d/idma_def_1d.h', 'w')
+    f_param_1d = open('idma_param_1d.h', 'w')
+    f_def_1d = open('idma_def_1d.h', 'w')
     gen_stim_1d(f_param_1d, f_def_1d, testcase)

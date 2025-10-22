@@ -7,3 +7,6 @@ PULP_CFLAGS += -DDEBUG_TEST
 endif
 
 include $(RULES_DIR)/pmsis_rules.mk
+
+stimuli:
+	python ../gen_stimuli.py 2D

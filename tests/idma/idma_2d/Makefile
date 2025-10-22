@@ -21,4 +21,4 @@ endif
 include $(RULES_DIR)/pmsis_rules.mk
 
 stimuli:
-	python gen_stimuli_idma_2d.py
+	python ../gen_stimuli.py 2D

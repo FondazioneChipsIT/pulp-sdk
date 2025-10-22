@@ -98,16 +98,16 @@ def gen_stim_2d(f_param, f_def, testcase):
 
 if (testcase == '1D'):
     print ("Generating stimuli for 1D case")
-    f_param_1d = open('mchan_1d/mchan_param_1d.h', 'w')
-    f_def_1d = open('mchan_1d/mchan_def_1d.h', 'w')
+    f_param_1d = open('mchan_param_1d.h', 'w')
+    f_def_1d = open('mchan_def_1d.h', 'w')
     gen_stim_1d(f_param_1d, f_def_1d, testcase)
 elif (testcase == '2D'):
     print ("Generating stimuli for 2D case")
-    f_param_2d = open('mchan_2d/mchan_param_2d.h', 'w')
-    f_def_2d = open('mchan_2d/mchan_def_2d.h', 'w')
+    f_param_2d = open('mchan_param_2d.h', 'w')
+    f_def_2d = open('mchan_def_2d.h', 'w')
     gen_stim_2d(f_param_2d, f_def_2d, testcase)
 else:
     print ("No testcase specified --> generating stimuli for 1d case")
-    f_param_1d = open('mchan_1d/mchan_param_1d.h', 'w')
-    f_def_1d = open('mchan_1d/mchan_def_1d.h', 'w')
+    f_param_1d = open('mchan_param_1d.h', 'w')
+    f_def_1d = open('mchan_def_1d.h', 'w')
     gen_stim_1d(f_param_1d, f_def_1d, testcase)

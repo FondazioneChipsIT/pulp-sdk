@@ -29,17 +29,25 @@ int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
     for (int i = 0; i < size; i++) {
         src_ptr[i] = (uint8_t)(i & 0xFF);
     }
-
     if (loc2loc == 1) {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L1ToL1((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
+        stop_cycle_count();
     } else if (ext2loc == 1) {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L2ToL1((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
+        stop_cycle_count();
     } else {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL2(pulp_cl_idma_L1ToL2((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
+        stop_cycle_count();
     }
+    PRINTF ("This transfer took %d cycles \n", getcycles());
 
     // Check the results
-
     for (int i=0; i < size; i++) {
         uint8_t expected = src_ptr[i]; 
         uint8_t actual   = dst_ptr[i];
@@ -70,12 +78,15 @@ void idma_task() {
         #else
         size = params_1d[k].size_1d;
         #endif
-        PRINTF ("Transfer %d with size %d \n", k, size);
+
         // L1 -> L2
+        PRINTF ("L1 -> L2: Transfer %d with size %d \n", k, size);
         glob_errors += idma_1D(size, pi_core_id(), 0, 0);
         // L2 -> L1
+        PRINTF ("L2 -> L1: Transfer %d with size %d \n", k, size);
         glob_errors += idma_1D(size, pi_core_id(), 1, 0);
         // L1 -> L1
+        PRINTF ("L1 -> L1: Transfer %d with size %d \n", k, size);
         glob_errors += idma_1D(size, pi_core_id(), 0, 1);
     }
 }

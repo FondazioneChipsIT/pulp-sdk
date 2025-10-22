@@ -7,29 +7,29 @@ uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
 uint32_t l1_dst_addr[8] = {0};
 
-int mchan_1d(transfer_1d transfer_params, int core_id, int ext2loc) {
+int mchan_1d(unsigned int size, int core_id, int ext2loc) {
     int error = 0;
     volatile uint8_t *l1_ptr, *l2_ptr;
 
     l1_ptr = (uint8_t*) l1_addr[core_id];
     l2_ptr = (uint8_t*) l2_addr[core_id];
 
-    for (int i = 0; i < transfer_params.size_1d; i++) {
+    for (int i = 0; i < size; i++) {
         l1_ptr[i] = (uint8_t)(i & 0xFF);
     }
 
-    for (int i = 0; i < transfer_params.size_1d; i++) {
-        l2_ptr[i] = (uint8_t)((transfer_params.size_1d-i) & 0xFF);
+    for (int i = 0; i < size; i++) {
+        l2_ptr[i] = (uint8_t)((size-i) & 0xFF);
     }
 
-    PRINTF ("Passing parameters: \n");
-    PRINTF ("L1_Addr: 0x%8x | L2_Addr: 0x%8x | Size: %d | ext2loc: %d \n", l1_addr[core_id], l2_addr[core_id], transfer_params.size_1d, ext2loc);
-
-    plp_dma_wait(plp_dma_memcpy(l2_addr[core_id], l1_addr[core_id], transfer_params.size_1d, ext2loc));
-
+    reset_cycle_count();
+    start_cycle_count();
+    plp_dma_wait(plp_dma_memcpy(l2_addr[core_id], l1_addr[core_id], size, ext2loc));
+    stop_cycle_count();
+    PRINTF ("This transfer took %d cycles \n", getcycles());
     // Check the results
 
-    for (int i=0; i < transfer_params.size_1d; i++) {
+    for (int i=0; i < size; i++) {
         uint8_t l1_result = l1_ptr[i]; 
         uint8_t l2_result = l2_ptr[i];
         if (l1_result != l2_result) {
@@ -51,10 +51,13 @@ void mchan_task() {
     uint32_t transfers_num = NB_TRANSFERS;
 
     for (int k=0; k < transfers_num; k++) {
+        size = params_1d[k].size_1d;
         // MCHAN 1D L1 -> L2
-        glob_errors += mchan_1d(params_1d[k], pi_core_id(), 0);
+        PRINTF ("L1 -> L2: Transfer %d with size %d \n", k, size);
+        glob_errors += mchan_1d(size, pi_core_id(), 0);
         // MCHAN 1D L2 -> L1
-        glob_errors += mchan_1d(params_1d[k], pi_core_id(), 1);
+        PRINTF ("L2 -> L1: Transfer %d with size %d \n", k, size);
+        glob_errors += mchan_1d(size, pi_core_id(), 1);
     }
 }
 
