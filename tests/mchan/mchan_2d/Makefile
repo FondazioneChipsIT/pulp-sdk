@@ -6,6 +6,11 @@ ifdef DEBUG_TEST
 PULP_CFLAGS += -DDEBUG_TEST
 endif
 
+ifdef CYCLE_COUNT
+PULP_CFLAGS += -DCYCLE_COUNT
+PULP_CFLAGS += -DDEBUG_TEST
+endif
+
 include $(RULES_DIR)/pmsis_rules.mk
 
 stimuli:

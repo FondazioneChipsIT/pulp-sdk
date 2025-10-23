@@ -55,10 +55,18 @@ int mchan_2d(transfer_2d transfer_params, int core_id, int ext2loc) {
     }
 
     if (ext2loc==1) {
+        reset_cycle_count();
+        start_cycle_count();
         plp_dma_wait(plp_dma_extToL1_2d(l1_addr[core_id], l2_addr[core_id], size, l1_stride, l1_length));
+        stop_cycle_count();
     } else {
+        reset_cycle_count();
+        start_cycle_count();
         plp_dma_wait(plp_dma_l1ToExt_2d(l2_addr[core_id], l1_addr[core_id], size, l2_stride, l2_length));
+        stop_cycle_count();
     }
+
+    PRINTF ("This transfer took %d cycles \n", getcycles());stop_cycle_count();
 
     // Check the results
     if (ext2loc == 1) {
@@ -95,10 +103,7 @@ int mchan_2d(transfer_2d transfer_params, int core_id, int ext2loc) {
             } else {
                 length_counter ++;
             }
-            // if (core_id == 0) {
-            // PRINTF ("RESULTS: L1[%d] @%8x = %8x vs L2[%d] @%8x = %8x \n", l1_idx, &l1_ptr[l1_idx], 
-            //                 l1_ptr[l1_idx], l2_idx, &l2_ptr[l2_idx], l2_ptr[l2_idx]);
-            // }
+
             if (l1_ptr[l1_idx] != l2_ptr[l2_idx]) {
                 error++;
                 if (core_id == 0) {
@@ -108,22 +113,7 @@ int mchan_2d(transfer_2d transfer_params, int core_id, int ext2loc) {
             }
         }
     }
-    // for (unsigned int rep = 0; rep < num_reps; rep++) {
-    //         unsigned int l1_offset = rep * l1_stride;
-    //         unsigned int l2_offset = rep * l2_stride;
-    //         for (unsigned int i = 0; i < l2_length; i++) {
-    //             uint8_t l1_result = l1_ptr[l1_offset + i];
-    //             uint8_t l2_result = l2_ptr[l2_offset + i];
 
-    //             if (l1_result != l2_result) {
-    //                 error++;
-    //                 if (core_id == 0) {
-    //                     PRINTF ("ERROR: L1[%d] @%8x = %8x vs L2[%d] @%8x = %8x \n", l1_offset + i, &l1_ptr[l1_offset + i], 
-    //                         l1_result, l2_offset+i, &l2_ptr[l2_offset + i], l2_result);
-    //                 }
-    //             }
-    //         }
-    //     }
     return error;
 }
 

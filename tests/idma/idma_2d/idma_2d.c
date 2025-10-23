@@ -50,12 +50,22 @@ int idma_2D (transfer_2d transfer, int core_id, int ext2loc, int loc2loc) {
     }
 
     if (loc2loc == 1) {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L1ToL1_2d((unsigned int)src_ptr, (unsigned int)dst_ptr, length, src_stride, dst_stride, num_reps));
+        stop_cycle_count();
     } if (ext2loc == 1) {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L2ToL1_2d((unsigned int)src_ptr, (unsigned int)dst_ptr, length, src_stride, dst_stride, num_reps));
+        stop_cycle_count();
     } else {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL2(pulp_cl_idma_L1ToL2_2d((unsigned int)src_ptr, (unsigned int)dst_ptr, length, src_stride, dst_stride, num_reps));
+        stop_cycle_count();
     }
+    PRINTF ("This transfer took %d cycles \n", getcycles());
 
     // Check the results
     
@@ -98,10 +108,19 @@ void idma_task() {
         #endif
         print_transfer(transfer);
         // L1 -> L2
+        if (pi_core_id() == 0) {
+            PRINTF ("L1 -> L2 \n");
+        }
         glob_errors += idma_2D(transfer, pi_core_id(), 0, 0);
         // L2 -> L1
+        if (pi_core_id() == 0) {
+            PRINTF ("L2 -> L1 \n");
+        }
         glob_errors += idma_2D(transfer, pi_core_id(), 1, 0);
         // L1 -> L1
+        if (pi_core_id() == 0) {
+            PRINTF ("L1 -> L1 \n");
+        }
         glob_errors += idma_2D(transfer, pi_core_id(), 0, 1);
     }
 }
