@@ -13,7 +13,7 @@ extern "C" {
 #define DMA_CONF_SERIALIZE 0
 
 #define CORE_SPACE 64*1024
-#define TRANSFER_SIZE 32*1024-1
+#define TRANSFER_SIZE 64*1024-1
 
 #ifdef DEBUG_TEST
     #define PRINTF(...) printf(__VA_ARGS__)
