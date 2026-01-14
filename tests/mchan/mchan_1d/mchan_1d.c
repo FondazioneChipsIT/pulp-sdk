@@ -7,11 +7,12 @@ uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
 uint32_t l1_dst_addr[8] = {0};
 
-int mchan_1d(unsigned int size, int core_id, int ext2loc) {
+int mchan_1d(unsigned int size, int core_id, int ext2loc, int loc2loc) {
     int error = 0;
-    volatile uint8_t *l1_ptr, *l2_ptr;
+    volatile uint8_t *l1_ptr, *l2_ptr, *l1_dst_ptr;
 
     l1_ptr = (uint8_t*) l1_addr[core_id];
+    l1_dst_ptr = (uint8_t*) l1_dst_addr[core_id];
     l2_ptr = (uint8_t*) l2_addr[core_id];
 
     for (int i = 0; i < size; i++) {
@@ -19,23 +20,44 @@ int mchan_1d(unsigned int size, int core_id, int ext2loc) {
     }
 
     for (int i = 0; i < size; i++) {
+        l1_ptr[i] = (uint8_t)((i-1) & 0xFF);
+    }
+
+    for (int i = 0; i < size; i++) {
         l2_ptr[i] = (uint8_t)((size-i) & 0xFF);
     }
 
-    reset_cycle_count();
-    start_cycle_count();
-    plp_dma_wait(plp_dma_memcpy(l2_addr[core_id], l1_addr[core_id], size, ext2loc));
-    stop_cycle_count();
+    if (loc2loc==0) {
+        reset_cycle_count();
+        start_cycle_count();
+        plp_dma_wait(plp_dma_memcpy(l2_addr[core_id], l1_addr[core_id], size, ext2loc));
+        stop_cycle_count();
+    } else {
+        reset_cycle_count();
+        start_cycle_count();
+        plp_dma_wait(plp_dma_memcpy(l1_dst_addr[core_id], l1_addr[core_id], size, ext2loc));
+        stop_cycle_count();
+    }
     PRINTF ("This transfer took %d cycles \n", getcycles());
     // Check the results
 
     for (int i=0; i < size; i++) {
         uint8_t l1_result = l1_ptr[i]; 
         uint8_t l2_result = l2_ptr[i];
-        if (l1_result != l2_result) {
+        uint8_t l1_dst_result = l1_dst_ptr[i];
+        if (loc2loc == 0) {
+            if (l1_result != l2_result) {
             error++;
-            if (core_id == 0) {
-                PRINTF ("Error: l1_result @%8x = %8x vs l2_result @%8x = %8x \n", &l1_ptr[i], l1_result, &l2_ptr[i], l2_result);
+                if (core_id == 0) {
+                    PRINTF ("Error: l1_result @%8x = %8x vs l2_result @%8x = %8x \n", &l1_ptr[i], l1_result, &l2_ptr[i], l2_result);
+                }
+            }
+        } else {
+            if (l1_result != l1_dst_result) {
+            error++;
+                if (core_id == 0) {
+                    PRINTF ("Error: l1_result @%8x = %8x vs l1_dst_result @%8x = %8x \n", &l1_ptr[i], l1_result, &l1_dst_ptr[i], l1_dst_result);
+                }
             }
         }
     }
@@ -54,10 +76,13 @@ void mchan_task() {
         size = params_1d[k].size_1d;
         // MCHAN 1D L1 -> L2
         PRINTF ("L1 -> L2: Transfer %d with size %d \n", k, size);
-        glob_errors += mchan_1d(size, pi_core_id(), 0);
+        glob_errors += mchan_1d(size, pi_core_id(), 0, 0);
         // MCHAN 1D L2 -> L1
         PRINTF ("L2 -> L1: Transfer %d with size %d \n", k, size);
-        glob_errors += mchan_1d(size, pi_core_id(), 1);
+        glob_errors += mchan_1d(size, pi_core_id(), 1, 0);
+        // MCHAN 1D L1 -> L1
+        PRINTF ("L1 -> L1: Transfer %d with size %d \n", k, size);
+        glob_errors += mchan_1d(size, pi_core_id(), 0, 1);
     }
 }
 

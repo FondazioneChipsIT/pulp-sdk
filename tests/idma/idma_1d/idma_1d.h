@@ -16,7 +16,7 @@ extern "C" {
 #define DMA_CONF_DEBURST 0
 #define DMA_CONF_SERIALIZE 0
 
-#define CORE_SPACE 2048
+#define CORE_SPACE 8*1024
 
 #ifdef DEBUG_TEST
     #define PRINTF(...) printf(__VA_ARGS__)
