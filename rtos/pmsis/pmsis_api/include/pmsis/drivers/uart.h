@@ -20,6 +20,8 @@
 
 #include "pmsis/pmsis_types.h"
 
+int uart_write(int uart_id, void *buffer, uint32_t size);
+
 /**
  * @ingroup groupDrivers
  */

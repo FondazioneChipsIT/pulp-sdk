@@ -93,7 +93,8 @@ static inline unsigned int hal_udma_channel_base(int id);
  */
 static inline unsigned int hal_udma_channel_isTx(unsigned int addr);
 
-
+int uart_open(int uart_id, int baudrate);
+void uart_close(int uart_id);
 
 
 
@@ -264,6 +265,10 @@ static inline unsigned int hal_udma_periph_base(int id) {
 static inline unsigned int hal_udma_channel_base(int id) {
   return ARCHI_SOC_PERIPHERALS_ADDR + ARCHI_UDMA_OFFSET + UDMA_PERIPH_OFFSET(id>>1) + UDMA_CHANNEL_OFFSET(id&1);
 }
+
+// static unsigned int hal_uart_base(int id) {
+//   return 0x40000000;
+// }
 ///////////////////////////////////////////////////
 
 /// @endcond

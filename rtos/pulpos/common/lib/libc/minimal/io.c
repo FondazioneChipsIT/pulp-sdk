@@ -38,6 +38,8 @@ static PI_FC_TINY struct pi_device pos_io_uart;
 static PI_L2 char pos_libc_uart_buffer[POS_PUTC_UART_BUFFER_SIZE];
 static int pos_libc_uart_buffer_index;
 
+static PI_L2 uint8_t pos_io_uart_buffer;
+
 static PI_L2 char pos_libc_uart_buffer_cl[ARCHI_NB_CLUSTER][POS_PUTC_UART_BUFFER_SIZE];
 static int pos_libc_uart_buffer_index_cl[ARCHI_NB_CLUSTER];
 #endif
@@ -359,6 +361,7 @@ int pos_libc_putc_uart_cl_flush()
     pos_cl_libc_putc_uart_flush_t req;
     req.cid = hal_cluster_id();
     req.done = 0;
+#ifndef ARCHI_NO_FC
     pos_task_init_from_cluster(&req.task);
     pi_task_callback(&req.task, pos_libc_putc_uart_req, (void* )&req);
     pos_cluster_push_fc_event(&req.task);
@@ -367,12 +370,14 @@ int pos_libc_putc_uart_cl_flush()
     {
         eu_evt_maskWaitAndClr(1<<POS_EVENT_CLUSTER_CALL_EVT);
     }
+#endif
 
     return 0;
 }
 
 static void pos_libc_putc_uart(char c)
 {
+#ifndef ARCHI_NO_FC
     if (pos_io_uart_enabled)
     {
         char *buffer;
@@ -406,6 +411,13 @@ static void pos_libc_putc_uart(char c)
             }
         }
     }
+#else
+    if (pos_io_uart_enabled)
+    {
+        pos_io_uart_buffer = c;
+        uart_write(POS_CONFIG_IO_UART_ITF, &pos_io_uart_buffer, 1);
+    }
+#endif
 }
 #endif
 
@@ -426,11 +438,6 @@ static void pos_putc(char c)
 
 int puts(const char *s)
 {
-#if (defined(POS_CONFIG_IO_HOST) && POS_CONFIG_IO_HOST == 1) || (defined(POS_CONFIG_IO_UART) && POS_CONFIG_IO_UART == 1)
-    if (!hal_is_fc())
-        pos_cl_mutex_lock(&pos_io_lock);
-#endif
-
     char c;
     do
     {
@@ -443,11 +450,6 @@ int puts(const char *s)
         pos_putc(c);
         s++;
     } while(1);
-
-#if (defined(POS_CONFIG_IO_HOST) && POS_CONFIG_IO_HOST == 1) || (defined(POS_CONFIG_IO_UART) && POS_CONFIG_IO_UART == 1)
-    if (!hal_is_fc())
-        pos_cl_mutex_unlock(&pos_io_lock);
-#endif
 
     return 0;
 }
@@ -486,8 +488,6 @@ int putchar(int c)
     return fputc(c, stdout);
 }
 
-
-
 int pos_libc_prf_locked(int (*func)(), void *dest, char *format, va_list vargs)
 {
     int err;
@@ -523,17 +523,22 @@ static void __attribute__((noreturn)) pos_wait_forever()
 
 void exit(int status)
 {
-    pos_init_stop();
+// #ifndef ARCHI_NO_FC
+//     pos_init_stop();
 
-    apb_soc_ctrl_corestatus_set(ARCHI_APB_SOC_CTRL_ADDR,
-        APB_SOC_CTRL_CORESTATUS_EOC(1) |
-        APB_SOC_CTRL_CORESTATUS_STATUS(status)
-    );
+//     apb_soc_ctrl_corestatus_set(ARCHI_APB_SOC_CTRL_ADDR,
+//         APB_SOC_CTRL_CORESTATUS_EOC(1) |
+//         APB_SOC_CTRL_CORESTATUS_STATUS(status)
+//     );
 
-#if defined(POS_CONFIG_IO_HOST) && POS_CONFIG_IO_HOST == 1
-    pos_semihost_exit(status == 0 ? SEMIHOST_EXIT_SUCCESS : SEMIHOST_EXIT_ERROR);
+// #if defined(POS_CONFIG_IO_HOST) && POS_CONFIG_IO_HOST == 1
+//     pos_semihost_exit(status == 0 ? SEMIHOST_EXIT_SUCCESS : SEMIHOST_EXIT_ERROR);
+// #endif
+// #endif
+//     pos_wait_forever();
+#ifndef ARCHI_NO_FC
+    apb_soc_status_set(status);
 #endif
-
     pos_wait_forever();
 }
 
@@ -554,19 +559,23 @@ void __assert_func(const char *file,
 
 int pos_io_start()
 {
-#if defined(POS_CONFIG_IO_UART) && POS_CONFIG_IO_UART == 1
-    struct pi_uart_conf conf;
+#if defined(POS_CONFIG_IO_UART) && (POS_CONFIG_IO_UART==1)
+    // struct pi_uart_conf conf;
 
-    pi_uart_conf_init(&conf);
+    // pi_uart_conf_init(&conf);
 
-    conf.enable_tx = 1;
-    conf.uart_id = POS_CONFIG_IO_UART_ITF;
-    conf.baudrate_bps = POS_CONFIG_IO_UART_BAUDRATE;
+    // conf.enable_tx = 1;
+    // conf.uart_id = POS_CONFIG_IO_UART_ITF;
+    // conf.baudrate_bps = POS_CONFIG_IO_UART_BAUDRATE;
 
-    pi_open_from_conf(&pos_io_uart, &conf);
+    // pi_open_from_conf(&pos_io_uart, &conf);
 
-    if (pi_uart_open(&pos_io_uart))
-        return -1;
+    // if (pi_uart_open(&pos_io_uart))
+    //     return -1;
+
+    // pos_io_uart_enabled = 1;
+
+    uart_open(POS_CONFIG_IO_UART_ITF, POS_CONFIG_IO_UART_BAUDRATE);
 
     pos_io_uart_enabled = 1;
 
@@ -583,7 +592,7 @@ int pos_io_stop()
 
     pos_io_uart_enabled = 0;
 
-    pi_uart_close(&pos_io_uart);
+    uart_close(POS_CONFIG_IO_UART_ITF);
 
 #endif
 

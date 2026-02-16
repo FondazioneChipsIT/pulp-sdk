@@ -79,6 +79,7 @@ ifeq '$(CONFIG_UART)' '1'
 ifneq '$(udma/uart/version)' ''
 CONFIG_UDMA = 1
 PULP_SRCS += drivers/uart/uart-v$(udma/uart/version).c
+PULP_SRCS += drivers/uart/udma_uart.c
 endif
 endif
 

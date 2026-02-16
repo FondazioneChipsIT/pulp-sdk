@@ -23,6 +23,13 @@
 
 #include "io.h"
 
+volatile void *cluster_entry;
+PI_L1 char *cluster_stacks;
+
+static volatile int cluster_running;
+static volatile int cluster_retval;
+
+struct pi_device cluster_dev;
 
 typedef void (*fptr)(void);
 
@@ -51,7 +58,96 @@ static void pos_init_do_dtors(void)
     }
 }
 
+static void cluster_core_init()
+{
+    eu_evt_maskSet((1<<PULP_DISPATCH_EVENT) | (1<<PULP_MUTEX_EVENT) | (1<<PULP_HW_BAR_EVENT));
+#ifdef ARCHI_HMR
+    // Enable resynch and synch requests
+    eu_irq_maskSet(1<<24 | 1<<23);
+    rt_irq_set_handler(24, pos_hmr_tmr_irq);
+    rt_irq_set_handler(23, pos_hmr_synch);
+    hal_spr_write(0x304, 1<<24|1<<23);
+    hal_irq_enable();
 
+    eu_bar_setup(eu_bar_addr(0), hmr_get_active_cores(0));
+#else
+    eu_bar_setup(eu_bar_addr(0), (1<<ARCHI_CLUSTER_NB_PE) - 1);
+#endif
+}
+
+
+extern int main(int argc, const char * const argv[]);
+
+void cluster_entry_stub()
+{
+    cluster_core_init();
+
+    pi_cl_team_barrier();
+    int retval = ((int (*)())cluster_entry)();
+    pi_cl_team_barrier();
+
+    if (hal_core_id() == 0)
+    {
+        cluster_retval = retval;
+        cluster_running = 0;
+        #ifdef ARCHI_NO_FC
+        hal_cluster_ctrl_return_set(hal_cluster_id(), cluster_retval);
+        hal_cluster_ctrl_eoc_set(1);
+        exit(cluster_retval);
+        #endif
+    }
+
+    eu_evt_maskClr(0xffffffff);
+    eu_evt_wait();
+    while(1);
+}
+
+
+
+void cluster_start(int cid, int (*entry)())
+{
+    // Store cluster entry point, ctr0 will jump here
+    cluster_entry = entry;
+
+    // Init FLL
+    #ifndef ARCHI_NO_FC
+    pos_fll_init(POS_FLL_CL);
+    #endif
+    // Initialize cluster L1 memory allocator
+    pos_alloc_init_l1(cid);
+
+    // Activate icache ---> TEMPORARY: UNTIL WE DECIDE WHICH ICACHE TO USE
+    hal_icache_cluster_enable(cid);
+
+    #ifndef ARCHI_NO_FC
+    if (!hal_is_fc())
+    {
+        struct pi_cluster_conf conf;
+
+        pi_cluster_conf_init(&conf);
+        conf.id = 0;
+        pi_open_from_conf(&cluster_dev, &conf);
+        if (pi_cluster_open(&cluster_dev))
+            return -1;
+    }
+    #endif
+
+    // alloc_init_l1(cid);
+
+    cluster_stacks = pi_l1_malloc(&cluster_dev, ARCHI_CLUSTER_NB_PE*CLUSTER_STACK_SIZE);
+    if (cluster_stacks == NULL)
+        return;
+    cluster_running = 1;
+
+    // Fetch all cores
+    #ifndef ARCHI_NO_FC
+    for (int i=0; i<ARCHI_CLUSTER_NB_PE; i++)
+    {
+      plp_ctrl_core_bootaddr_set_remote(cid, i, (int)_start);
+    }
+    eoc_fetch_enable_remote(cid, (1<<ARCHI_CLUSTER_NB_PE) - 1);
+    #endif
+}
 
 void pos_init_start()
 {
@@ -60,13 +156,12 @@ void pos_init_start()
   hal_pmu_bypass_set (ARCHI_REG_FIELD_SET (hal_pmu_bypass_get (), 1, 11, 1) );
 #endif
 
-  INIT_TRACE(POS_LOG_INFO, "Starting runtime initialization\n");
-
+  pos_soc_init();
   pos_irq_init();
 
-  pos_soc_init();
-
+  #ifdef ARCHI_NO_FC
   pos_soc_event_init();
+  #endif
 
   // Initialize first the memory allocators and the utils so that they are
   // available for constructors, especially to let them declare
@@ -75,7 +170,7 @@ void pos_init_start()
   pos_allocs_init();
 
   // Scheduler is initialized now to let other modules use it early
-  pos_sched_init();
+//   pos_sched_init();
 
   // Call global and static constructors
   // Each module may do private initializations there
@@ -86,6 +181,12 @@ void pos_init_start()
 
   // Now now the minimal init are done, we can activate interruptions
   hal_irq_enable();
+
+  
+  if (!hal_is_fc())
+  {
+    cluster_start(hal_cluster_id(), main);
+  }
 }
 
 

@@ -128,7 +128,7 @@ typedef struct pi_cluster_pe_task_s
 
 #if defined(ARCHI_HAS_L2)
 #ifdef ARCHI_HAS_L2_MULTI
-#define POS_NB_ALLOC_L2 2
+#define POS_NB_ALLOC_L2 3
 #else
 #define POS_NB_ALLOC_L2 1
 #endif

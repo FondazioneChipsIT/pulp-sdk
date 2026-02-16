@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 #if defined(ARCHI_HAS_L1)
-pos_alloc_t *pos_alloc_l1;
+pos_alloc_t pos_alloc_l1[ARCHI_NB_CLUSTER];
 #endif
 
 #if defined(ARCHI_HAS_FC_TCDM)
@@ -65,8 +65,11 @@ void pos_allocs_init()
     INIT_TRACE(POS_LOG_INFO, "Initializing L2 private bank0 allocator (base: 0x%8x, size: 0x%8x)\n", (int)pos_l2_priv0_base(), pos_l2_priv0_size());
     pos_alloc_init(&pos_alloc_l2[0], pos_l2_priv0_base(), pos_l2_priv0_size());
 
+    INIT_TRACE(POS_LOG_INFO, "Initializing L2 private bank1 allocator (base: 0x%8x, size: 0x%8x)\n", (int)pos_l2_priv1_base(), pos_l2_priv1_size());
+    pos_alloc_init(&pos_alloc_l2[1], pos_l2_priv1_base(), pos_l2_priv1_size());
+
     INIT_TRACE(POS_LOG_INFO, "Initializing L2 shared banks allocator (base: 0x%8x, size: 0x%8x)\n", (int)pos_l2_shared_base(), pos_l2_shared_size());
-    pos_alloc_init(&pos_alloc_l2[1], pos_l2_shared_base(), pos_l2_shared_size());
+    pos_alloc_init(&pos_alloc_l2[2], pos_l2_shared_base(), pos_l2_shared_size());
 
 #ifdef CONFIG_ALLOC_L2_PWD_NB_BANKS
     pos_alloc_l2[2].track_pwd = 1;
@@ -82,18 +85,19 @@ void pos_allocs_init()
     pos_alloc_account_free(&pos_alloc_l2[2], pos_l2_shared_base() - sizeof(pos_alloc_chunk_t), pos_l2_shared_size() + sizeof(pos_alloc_chunk_t));
 #endif
 #else
-  //pos_trace(//pos_trace_INIT, "Initializing L2 allocator (base: 0x%8x, size: 0x%8x)\n", (int)pos_l2_base(), pos_l2_size());
-    pos_alloc_init(&pos_alloc_l2[0], pos_l2_base(), pos_l2_size());
+  pos_trace(pos_trace_INIT, "Initializing L2 allocator (base: 0x%8x, size: 0x%8x)\n", (int)pos_l2_base(), pos_l2_size());
+  pos_alloc_init(&pos_alloc_l2[0], pos_l2_base(), pos_l2_size());
 #endif
 #endif
 
 #if defined(ARCHI_HAS_FC_TCDM)
-  //pos_trace(//pos_trace_INIT, "Initializing FC TCDM allocator (base: 0x%8x, size: 0x%8x)\n", (int)pos_fc_tcdm_base(), pos_fc_tcdm_size());
-    pos_alloc_init(&pos_alloc_fc_tcdm, pos_fc_tcdm_base(), pos_fc_tcdm_size());
+  pos_trace(pos_trace_INIT, "Initializing FC TCDM allocator (base: 0x%8x, size: 0x%8x)\n", (int)pos_fc_tcdm_base(), pos_fc_tcdm_size());
+  pos_alloc_init(&pos_alloc_fc_tcdm, pos_fc_tcdm_base(), pos_fc_tcdm_size());
 #endif
 
 #if defined(ARCHI_HAS_L1)
-    pos_alloc_l1 = pos_alloc(get_fc_alloc(), sizeof(pos_alloc_t)*pos_nb_cluster());
+    // pos_alloc_l1[hal_cluster_id()] = pos_alloc(get_fc_alloc(), sizeof(pos_alloc_t)*pos_nb_cluster());
+    pos_alloc_init(&pos_alloc_l1[0], pos_l1_base(0), sizeof(pos_alloc_t)*pos_nb_cluster());
 #endif
 }
 
@@ -163,7 +167,7 @@ void *pi_cl_l1_malloc(struct pi_device *device, uint32_t size)
     pos_cluster_t *data = (pos_cluster_t *)device->data;
     cid = data->cid;
   }
-  return pos_alloc(&pos_alloc_l1[cid], size);
+  return pos_alloc(&pos_alloc_l1[0], size);
 }
 
 void pi_cl_l1_free(struct pi_device *device, void *_chunk, int size)
@@ -181,12 +185,12 @@ void pi_cl_l1_free(struct pi_device *device, void *_chunk, int size)
 
 void *pi_l2_malloc(int size)
 {
-    return pos_alloc(&pos_alloc_l2[1], size);
+    return pos_alloc(&pos_alloc_l2[2], size);
 }
 
 void pi_l2_free(void *_chunk, int size)
 {
-    return pos_free(&pos_alloc_l2[1], _chunk, size);
+    return pos_free(&pos_alloc_l2[2], _chunk, size);
 }
 
 #if defined(ARCHI_HAS_FC_TCDM)

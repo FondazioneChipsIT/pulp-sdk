@@ -64,14 +64,18 @@ static inline void pos_irq_mask_clr(unsigned int mask)
     hal_spr_read_then_clr_from_reg(0x304, mask);
 
 #elif defined(ITC_VERSION) && defined(EU_VERSION)
-    hal_itc_enable_clr(mask);
+    if (hal_is_fc())
+        hal_itc_enable_clr(mask);
+    else
+        eu_irq_maskClr(mask);
 
 #elif defined(ITC_VERSION)
     hal_itc_enable_clr(mask);
 
 #elif defined(EU_VERSION)
     eu_irq_maskClr(mask);
-    eu_evt_maskClr(mask);
+    if (hal_is_fc())
+        eu_evt_maskClr(mask);
 #endif
 }
 
