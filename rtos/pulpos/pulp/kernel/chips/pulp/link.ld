@@ -3,9 +3,9 @@ OUTPUT_ARCH(riscv)
 ENTRY( _start )
 MEMORY
 {
-  L2           : ORIGIN = 0x1c000004, LENGTH = 0x0007fffc
+  L2           : ORIGIN = 0x1c000000, LENGTH = 0x0007fffc
   L2_aliased   : ORIGIN = 0x00000004, LENGTH = 0x0003fffc
-  L1           : ORIGIN = 0x10000004, LENGTH = 0x0003fffc
+  L1           : ORIGIN = 0x10000000, LENGTH = 0x0003fffc
   L1_aliased   : ORIGIN = 0x00000004, LENGTH = 0x0003fffc
 }
 
