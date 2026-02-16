@@ -166,7 +166,7 @@ void *pi_cl_l1_malloc(struct pi_device *device, uint32_t size)
     pos_cluster_t *data = (pos_cluster_t *)device->data;
     cid = data->cid;
   }
-  return pos_alloc(&pos_alloc_l1[cid], size);
+  return pos_alloc(&pos_alloc_l1[0], size);
 }
 
 void pi_cl_l1_free(struct pi_device *device, void *_chunk, int size)
