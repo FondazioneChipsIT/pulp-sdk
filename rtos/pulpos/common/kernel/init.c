@@ -117,34 +117,12 @@ void cluster_start(int cid, int (*entry)())
     // Activate icache ---> TEMPORARY: UNTIL WE DECIDE WHICH ICACHE TO USE
     hal_icache_cluster_enable(cid);
 
-    #ifndef ARCHI_NO_FC
-    if (!hal_is_fc())
-    {
-        struct pi_cluster_conf conf;
-
-        pi_cluster_conf_init(&conf);
-        conf.id = 0;
-        pi_open_from_conf(&cluster_dev, &conf);
-        if (pi_cluster_open(&cluster_dev))
-            return -1;
-    }
-    #endif
-
-    // alloc_init_l1(cid);
-
     cluster_stacks = pi_l1_malloc(&cluster_dev, ARCHI_CLUSTER_NB_PE*CLUSTER_STACK_SIZE);
     if (cluster_stacks == NULL)
         return;
     cluster_running = 1;
 
-    // Fetch all cores
-    #ifndef ARCHI_NO_FC
-    for (int i=0; i<ARCHI_CLUSTER_NB_PE; i++)
-    {
-      plp_ctrl_core_bootaddr_set_remote(cid, i, (int)_start);
-    }
     eoc_fetch_enable_remote(cid, (1<<ARCHI_CLUSTER_NB_PE) - 1);
-    #endif
 }
 
 void pos_init_start()
@@ -184,10 +162,9 @@ void pos_init_start()
   // Now now the minimal init are done, we can activate interruptions
   hal_irq_enable();
 
-  if (!hal_is_fc())
-  {
-    cluster_start(hal_cluster_id(), main);
-  }
+#ifdef ARCHI_NO_FC
+  cluster_start(hal_cluster_id(), main);
+#endif
 }
 
 
