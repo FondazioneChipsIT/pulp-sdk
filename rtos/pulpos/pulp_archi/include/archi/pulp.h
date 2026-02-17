@@ -21,6 +21,10 @@
 #include "archi/pulp_defs.h"
 #include "archi/utils.h"
 
+#ifndef CLUSTER_STACK_SIZE
+#define CLUSTER_STACK_SIZE 0x800
+#endif
+
 #ifdef __PULPOS2__
 #define  __A_PULP_CHIP_INC(x) #x
 #define  _A_PULP_CHIP_INC(x) __A_PULP_CHIP_INC(archi/chips/x/pulp_archi.h)

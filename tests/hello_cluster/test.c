@@ -13,11 +13,8 @@
 
 int main()
 {
-    if (pi_core_id() == 0) {
-        printf("Hello from cluster \n");
-    }
-
-    *(int*)(0x10000000)=0xABBAABBA;
+    printf ("Hello from cluster %d | core %d \n", pi_cluster_id(), pi_core_id());
+    pi_cl_team_barrier();
     return 0;
 }
 
