@@ -34,14 +34,39 @@ pos_init_entry:
     # Just re-route them to the right entry
     csrr    a0, 0xF14
     andi    a1, a0, 0x1f
+    #ifdef ARCHI_NO_FC
+    # PEs from 1 to 7 will go to sync_loop and wait. PE0 will reach them
+    # later after the pos_init_start. Then, they'll set up their stack into
+    # the L1 and jump to cluster_entry_stub
+    li t0, 0x1003FFF0
+    sw x0, 0(t0)
+    # We check if the offset of the core is zero, so that even if the cluster
+    # ID is not zero, the execution does not break here
+    andi    a2, a0, 0x0f
+    bnez    a2, sync_loop
+#else
     srli    a0, a0, 5
+
+#ifdef ARCHI_CL_BOOT
+
     li      a2, ARCHI_FC_CID
-#    bne     a0, a2, pos_pe_start
-    beq     a0, a2, label0
-    j      pos_pe_start
-label0:
+    beq     a0, a2, do_cl_boot
+    bnez    a1, pe_start
+
+#else
+
+#ifdef ARCHI_FC_CID
+    li      a2, ARCHI_FC_CID
+    bne     a0, a2, pe_start
+#else
+    bnez    a1, pe_start
+#endif
+#endif
 
 #endif
+
+#endif
+
 
 
     # Clear the bss segment
@@ -57,13 +82,24 @@ label0:
     # Stack initialization
     la   x2, stack
 
-
-
     /* Do all other initializations from C code */
     la   t0, pos_init_start
     jalr x1, t0
 
-
+#ifdef ARCHI_NO_FC
+    csrr    a0, 0xF14
+    andi    a1, a0, 0x1f
+#if PULP_CHIP == CHIP_CARFIELD
+    li t0, 0x5003FFF0
+#elif PULP_CHIP == CHIP_ASTRAL
+    li t0, 0x5003FFF0
+#else
+    li t0, 0x1003FFF0
+#endif
+    li t1, 0x1
+    sw t1, 0(t0)
+    j pe_start
+#endif
 
 .section .text_l2
 
@@ -80,9 +116,6 @@ label0:
     mv   a0, s0
     la   t0, exit
     jalr x1, t0
-
-
-
 
 .section .vectors, "ax"
 .option norvc;
@@ -146,3 +179,40 @@ pos_semihosting_call:
     ebreak
     jr          ra
 
+#if defined(ARCHI_HAS_CLUSTER)
+pe_start:
+#if defined(ARCHI_HMR)
+    csrr t0, 0xf14
+    li   t1, ARCHI_HMR_ADDR + HMR_CORE_OFFSET
+    andi t0, t0, 0x01f
+    sll  t0, t0, HMR_CORE_SLL
+    add  t0, t0, t1
+    lw   t1, HMR_CORE_REGS_SP_STORE_REG_OFFSET(t0)
+    bnez t1, pos_hmr_sw_reload
+#endif
+    la   x2, cluster_stacks
+    lw   x2, 0(x2)
+    li   x3, CLUSTER_STACK_SIZE
+    addi a1, a1, 1
+    mul  x1, x3, a1
+    add  x2, x2, x1
+    j    cluster_entry_stub
+#endif
+
+do_cl_boot:
+    li  x2, 0x10200000
+    li  x3, 0x1
+    la  x4, _start
+    sw  x4, 0x40(x2)
+    sw  x3, 8(x2)
+
+loop:
+    li x2, 0x1a109800
+    sw x0, 0(x2)
+    wfi
+    j loop
+
+sync_loop:
+    lw t1, 0(t0)
+    bnez    t1,  pe_start
+    j sync_loop
