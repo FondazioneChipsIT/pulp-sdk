@@ -10,6 +10,8 @@
 #endif
 
 #define CORE_SPACE 2048
+#define TOT_SIZE ARCHI_CLUSTER_NB_PE * CORE_SPACE
+#define NB_PRESETS 13
 
 #ifdef CYCLE_COUNT
     static inline void start_cycle_count () { pi_perf_cl_start(); }

@@ -16,7 +16,9 @@ extern "C" {
 #define DMA_CONF_DEBURST 0
 #define DMA_CONF_SERIALIZE 0
 
-#define CORE_SPACE 8*1024
+#define CORE_SPACE 1024
+#define TOT_SIZE ARCHI_CLUSTER_NB_PE * CORE_SPACE
+#define NB_PRESETS 14
 
 #ifdef DEBUG_TEST
     #define PRINTF(...) printf(__VA_ARGS__)

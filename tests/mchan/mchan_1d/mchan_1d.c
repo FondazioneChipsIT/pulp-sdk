@@ -1,7 +1,5 @@
 #include "mchan_1d.h"
 
-#define TOT_SIZE 8 * CORE_SPACE
-#define NB_PRESETS 13
 int glob_errors = 0;
 uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};

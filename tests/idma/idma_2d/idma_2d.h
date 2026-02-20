@@ -17,6 +17,8 @@ extern "C" {
 #define DMA_CONF_SERIALIZE 0
 
 #define CORE_SPACE 2048
+#define TOT_SIZE ARCHI_CLUSTER_NB_PE * CORE_SPACE
+#define NB_PRESETS 7
 
 #ifdef QUICK_MODE
 #define TRANSFERS 7

@@ -1,8 +1,5 @@
 #include "idma_1d.h"
 
-#define TOT_SIZE 8 * CORE_SPACE
-#define NB_TASKS 1
-#define NB_PRESETS 14
 int glob_errors = 0;
 uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
