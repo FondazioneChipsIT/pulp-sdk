@@ -52,9 +52,9 @@ static inline int pulp_cl_idma_L1ToL1(unsigned int src, unsigned int dst, unsign
 // 2D Transfers
 /** 2-dimensional transfer with event-based completion.
  *
-  \param   src    Address in the memory where to store the data. There is no restriction on memory alignment.
-  \param   dst    Address in the memory where to load the data. There is no restriction on memory alignment.
-  \param   size   Number of bytes to be transfered. The only restriction is that this size must fit 16 bits, i.e. must be inferior to 65536.
+  \param   src        Address in the memory where to store the data. There is no restriction on memory alignment.
+  \param   dst        Address in the memory where to load the data. There is no restriction on memory alignment.
+  \param   size       Length parameter: number of contiguous bytes to be transferred for each repetition. The only restriction is that this size must fit 16 bits, i.e. must be inferior to 65536.
   \param   src_stride 2D stride, which is the number of bytes which are added to the beginning of the current line to switch to the next one. Must fit 16 bits, i.e. must be inferior to 65536.
   \param   dst_stride 2D stride, which is the number of bytes which are added to the beginning of the current line to switch to the next one. Must fit 16 bits, i.e. must be inferior to 65536.
   \param   num_reps   Number of 1D transfers that comprise the 2D transfer.
@@ -71,7 +71,7 @@ static inline int pulp_cl_idma_L1ToL1_2d(unsigned int src, unsigned int dst, uns
  *
   \param   src            Address in the memory where to store the data. There is no restriction on memory alignment.
    \param   dst           Address in the memory where to load the data. There is no restriction on memory alignment.
-   \param   size          Number of bytes to be transfered. The only restriction is that this size must fit 16 bits, i.e. must be inferior to 65536.
+   \param   size          Length parameter: number of contiguous bytes to be transferred for each repetition. The only restriction is that this size must fit 16 bits, i.e. must be inferior to 65536.
    \param   src_stride    2D stride, which is the number of bytes which are added to the beginning of the current line to switch to the next one. Must fit 16 bits, i.e. must be inferior to 65536.
    \param   dst_stride    2D stride, which is the number of bytes which are added to the beginning of the current line to switch to the next one. Must fit 16 bits, i.e. must be inferior to 65536.
    \param   num_reps      Number of 1D transfers that comprise the 2D transfer.
@@ -128,24 +128,6 @@ static inline unsigned int plp_cl_dma_status_toL2();
 #define DMA_DEMUX_ADDR ARCHI_IDMA_DEMUX_ADDR
 #endif
 #define DMA_ADDR ARCHI_IDMA_EXT_ADDR
-
-// #if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(__LLVM__)
-// #define IDMA_WRITE(value, offset) __builtin_pulp_OffsetedWrite((value), (int *)DMA_ADDR, (offset))
-// #define IDMA_READ(offset) __builtin_pulp_OffsetedRead((int *)DMA_ADDR, (offset))
-// #ifdef ARCHI_HAS_DMA_DEMUX
-// #define DMA_CL_WRITE(value, offset) __builtin_pulp_OffsetedWrite((value), (int *)DMA_DEMUX_ADDR, (offset))
-// #define DMA_CL_READ(offset) __builtin_pulp_OffsetedRead((int *)DMA_DEMUX_ADDR, (offset))
-// #endif
-// #else
-// #define IDMA_WRITE(value, offset) pulp_write32(DMA_ADDR + (offset), (value))
-// #define IDMA_READ(offset) pulp_read32(DMA_ADDR + (offset))
-// #define DMA_CL_WRITE(value, offset) IDMA_WRITE(value, offset)
-// #define DMA_CL_READ(offset) IDMA_READ(offset)
-// #ifdef ARCHI_HAS_DMA_DEMUX
-// #define DMA_CL_WRITE(value, offset) pulp_write32(DMA_DEMUX_ADDR + (offset), (value))
-// #define DMA_CL_READ(offset) pulp_read32(DMA_DEMUX_ADDR + (offset))
-// #endif
-// #endif
 
 #define DMA_CL_WRITE(value, offset) pulp_write32(DMA_DEMUX_ADDR + (offset), (value))
 #define DMA_CL_READ(offset) pulp_read32(DMA_DEMUX_ADDR + (offset))
@@ -371,16 +353,24 @@ static inline unsigned int plp_cl_dma_status_toL2() {
   return DMA_CL_READ(IDMA_REG32_3D_STATUS_0_REG_OFFSET);
 }
 
+// DEEPLOY DRIVERS
+
 static inline void pulp_idma_transfer_1d_and_wait(unsigned int direction, unsigned int ext, unsigned int loc, unsigned short size) {
   if (direction == 1) {
-    // L2 to L1
-    // printf ("Transfer from L2 to L1 with: src: 0x%8x dst: 0x%8x size: %d \n", ext, loc, size);
     pulp_cl_idma_L2ToL1(ext, loc, size);
     plp_cl_dma_barrier_toL1();
   } else {
-    // L1 to L2
-    // printf ("Transfer from L1 to L2 with: src: 0x%8x dst: 0x%8x size: %d \n", loc, ext, size);
     pulp_cl_idma_L1ToL2(loc, ext, size);
+    plp_cl_dma_barrier_toL2();
+  }
+}
+
+static inline void pulp_idma_transfer_2d_and_wait(unsigned int direction, unsigned int ext, unsigned int loc, unsigned short size, unsigned int stride_ext, unsigned int stride_loc, unsigned int num_reps) {
+  if (direction == 1) {
+    pulp_cl_idma_L2ToL1_2d(ext, loc, size, stride_ext, stride_loc, num_reps);
+    plp_cl_dma_barrier_toL1();
+  } else {
+    pulp_cl_idma_L1ToL2_2d(loc, ext, size, stride_loc, stride_ext, num_reps);
     plp_cl_dma_barrier_toL2();
   }
 }

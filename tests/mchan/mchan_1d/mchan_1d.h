@@ -1,36 +1,17 @@
 #include "pmsis.h"
 #include "stdio.h"
-
-#include "idma_def_3d.h"
-#include "idma_presets.h"
-#include "idma_param_3d.h"
-
-#ifndef _DMA_FRONTEND_REG_DEFS_
-#define _DMA_FRONTEND_REG_DEFS_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define DMA_CONF_DECOUPLE 0
-#define DMA_CONF_DEBURST 0
-#define DMA_CONF_SERIALIZE 0
-
-#define CORE_SPACE 2048
-#define TOT_SIZE ARCHI_CLUSTER_NB_PE * CORE_SPACE
-#define NB_PRESETS 9
-
-#ifdef QUICK_MODE
-#define TRANSFERS 7
-#else
-#define TRANSFERS NB_TRANSFERS
-#endif
+#include "mchan_def_1d.h"
+#include "mchan_param_1d.h"
 
 #ifdef DEBUG_TEST
     #define PRINTF(...) printf(__VA_ARGS__)
 #else
     #define PRINTF(...)
 #endif
+
+#define CORE_SPACE 2048
+#define TOT_SIZE ARCHI_CLUSTER_NB_PE * CORE_SPACE
+#define NB_PRESETS 13
 
 #ifdef CYCLE_COUNT
     static inline void start_cycle_count () { pi_perf_cl_start(); }
@@ -43,8 +24,3 @@ extern "C" {
     static inline void reset_cycle_count () {}
     static inline unsigned int getcycles() {return 0;}
 #endif
-
-#ifdef __cplusplus
-}  // extern "C"
-#endif
-#endif  // _DMA_FRONTEND_REG_DEFS_

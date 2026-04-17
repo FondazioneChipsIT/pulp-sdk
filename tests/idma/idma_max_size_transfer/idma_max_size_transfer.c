@@ -1,5 +1,8 @@
-#include "idma_1d.h"
+#include "idma_max_size_transfer.h"
 
+#define TOT_SIZE CORE_SPACE
+#define NB_TASKS 1
+#define NB_PRESETS 13
 int glob_errors = 0;
 uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
@@ -26,25 +29,17 @@ int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
     for (int i = 0; i < size; i++) {
         src_ptr[i] = (uint8_t)(i & 0xFF);
     }
+
     if (loc2loc == 1) {
-        reset_cycle_count();
-        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L1ToL1((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
-        stop_cycle_count();
     } else if (ext2loc == 1) {
-        reset_cycle_count();
-        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L2ToL1((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
-        stop_cycle_count();
     } else {
-        reset_cycle_count();
-        start_cycle_count();
         plp_cl_dma_wait_toL2(pulp_cl_idma_L1ToL2((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
-        stop_cycle_count();
     }
-    PRINTF ("This transfer took %d cycles \n", getcycles());
 
     // Check the results
+
     for (int i=0; i < size; i++) {
         uint8_t expected = src_ptr[i]; 
         uint8_t actual   = dst_ptr[i];
@@ -63,28 +58,16 @@ int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
 void idma_task() {
     PRINTF ("Core[%d] has entered idma_task \n", pi_core_id());
     uint32_t size;
-    uint32_t transfers_num;
-    #ifdef QUICK_MODE
-    transfers_num = NB_PRESETS;
-    #else
-    transfers_num = NB_TRANSFERS;
-    #endif
-    for (int k = 0; k < transfers_num; k ++) {
-        #ifdef QUICK_MODE
-        size = idma_presets[k].size_1d;
-        #else
-        size = params_1d[k].size_1d;
-        #endif
 
+    for (int k = 0; k < 1; k ++) {
+        size = TRANSFER_SIZE;
+        PRINTF ("Transfer %d with size %d \n", k, size);
         // L1 -> L2
-        PRINTF ("L1 -> L2: Transfer %d with size %d \n", k, size);
         glob_errors += idma_1D(size, pi_core_id(), 0, 0);
         // L2 -> L1
-        PRINTF ("L2 -> L1: Transfer %d with size %d \n", k, size);
         glob_errors += idma_1D(size, pi_core_id(), 1, 0);
-        // L1 -> L1
-        PRINTF ("L1 -> L1: Transfer %d with size %d \n", k, size);
-        glob_errors += idma_1D(size, pi_core_id(), 0, 1);
+        // // L1 -> L1
+        // glob_errors += idma_1D(size, pi_core_id(), 0, 1);
     }
 }
 
@@ -96,24 +79,22 @@ void allocate_mem_to_cores () {
 
     if (core_id == 0) {
         l1_addr[0]     = (uint32_t) pi_l1_malloc(0, TOT_SIZE);
-        l1_dst_addr[0] = (uint32_t) pi_l1_malloc(0, TOT_SIZE);
         l2_addr[0]     = (uint32_t) pi_l2_malloc(TOT_SIZE);
     }
-    pi_cl_team_barrier();
-    // The following rt_team_barrier is needed so that
+
+    // The following synch_barrier is needed so that
     // no core can assign its address range until the mallocs are executed
+    pi_cl_team_barrier();
 
-    l1_addr[core_id] = l1_addr[0] + core_id * CORE_SPACE;
-    l1_dst_addr[core_id] = l1_dst_addr[0] + core_id * CORE_SPACE;
-    l2_addr[core_id] = l2_addr[0] + core_id * CORE_SPACE;
+    if (core_id == 0) {
+        printf ("Core %d: l1_addr[%d] = %8x \n", core_id, 0, l1_addr[0]);
+        printf ("Core %d: l2_addr[%d] = %8x \n", core_id, 0, l2_addr[0]);
+    }
 
-    PRINTF ("Core %d: l1_addr = %8x \n", core_id, l1_addr[core_id]);
-    PRINTF ("Core %d: l1_dst_addr = %8x \n", core_id, l1_dst_addr[core_id]);
-    PRINTF ("Core %d: l2_addr = %8x \n", core_id, l2_addr[core_id]);
-
-    // The following rt_team_barrier is needed so that
+    // The following synch_barrier is needed so that
     // no core can start executing until all address ranges have been assigned
     pi_cl_team_barrier();
+
 }
 
 void free_allocated_memory () {

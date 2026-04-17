@@ -1,29 +1,25 @@
 #include "idma_2d.h"
 
-#define TOT_SIZE 8 * CORE_SPACE
-#define NB_TASKS 1
-#define NB_PRESETS 7
-
 int glob_errors = 0;
 uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
 uint32_t l1_dst_addr[8] = {0};
 
-void print_transfer (TransferParameters transfer) {
+void print_transfer (transfer_2d transfer) {
     PRINTF ("Core[%d] => Transfer Parameters | Size: %d | Length: %d | Src_stride_2d: %d | Dst_stride_2d: %d \n", 
-            pi_core_id(), transfer.size,
-            transfer.length, transfer.src_stride, transfer.dst_stride);
+            pi_core_id(), transfer.size_2d,
+            transfer.length, transfer.src_stride_2d, transfer.dst_stride_2d);
 }
 
-int idma_2D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc) {
+int idma_2D (transfer_2d transfer, int core_id, int ext2loc, int loc2loc) {
     volatile uint8_t *src_ptr, *dst_ptr;
 
     int error = 0;
     int offset_2d;
 
-    uint32_t src_stride = transfer.src_stride;
-    uint32_t dst_stride = transfer.dst_stride;
-    uint32_t size = transfer.size;
+    uint32_t src_stride = transfer.src_stride_2d;
+    uint32_t dst_stride = transfer.dst_stride_2d;
+    uint32_t size = transfer.size_2d;
     uint32_t length = transfer.length;
     uint32_t num_reps = size/length;
 
@@ -50,12 +46,22 @@ int idma_2D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc)
     }
 
     if (loc2loc == 1) {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L1ToL1_2d((unsigned int)src_ptr, (unsigned int)dst_ptr, length, src_stride, dst_stride, num_reps));
+        stop_cycle_count();
     } if (ext2loc == 1) {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL1(pulp_cl_idma_L2ToL1_2d((unsigned int)src_ptr, (unsigned int)dst_ptr, length, src_stride, dst_stride, num_reps));
+        stop_cycle_count();
     } else {
+        reset_cycle_count();
+        start_cycle_count();
         plp_cl_dma_wait_toL2(pulp_cl_idma_L1ToL2_2d((unsigned int)src_ptr, (unsigned int)dst_ptr, length, src_stride, dst_stride, num_reps));
+        stop_cycle_count();
     }
+    PRINTF ("This transfer took %d cycles \n", getcycles());
 
     // Check the results
     
@@ -82,7 +88,7 @@ int idma_2D (TransferParameters transfer, int core_id, int ext2loc, int loc2loc)
 
 void idma_task() {
     PRINTF ("Core[%d] has entered idma_task \n", pi_core_id());
-    TransferParameters transfer;
+    transfer_2d transfer;
     uint32_t transfers_num;
     #ifdef QUICK_MODE
     transfers_num = NB_PRESETS;
@@ -94,14 +100,23 @@ void idma_task() {
         #ifdef QUICK_MODE
         transfer = idma_presets[k];
         #else
-        transfer = transfer_params[k];
+        transfer = params_2d[k];
         #endif
         print_transfer(transfer);
         // L1 -> L2
+        if (pi_core_id() == 0) {
+            PRINTF ("L1 -> L2 \n");
+        }
         glob_errors += idma_2D(transfer, pi_core_id(), 0, 0);
         // L2 -> L1
+        if (pi_core_id() == 0) {
+            PRINTF ("L2 -> L1 \n");
+        }
         glob_errors += idma_2D(transfer, pi_core_id(), 1, 0);
         // L1 -> L1
+        if (pi_core_id() == 0) {
+            PRINTF ("L1 -> L1 \n");
+        }
         glob_errors += idma_2D(transfer, pi_core_id(), 0, 1);
     }
 }

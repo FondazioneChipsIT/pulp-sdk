@@ -1,58 +1,61 @@
-#include "idma_1d.h"
+#include "mchan_1d.h"
 
 int glob_errors = 0;
 uint32_t l1_addr[8] = {0};
 uint32_t l2_addr[8] = {0};
 uint32_t l1_dst_addr[8] = {0};
 
-int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
+int mchan_1d(unsigned int size, int core_id, int ext2loc, int loc2loc) {
     int error = 0;
-    volatile uint8_t *src_ptr, *dst_ptr;
+    volatile uint8_t *l1_ptr, *l2_ptr, *l1_dst_ptr;
 
-    if (loc2loc == 1) {
-        // L1 to L1 transfer
-        src_ptr = (uint8_t*) l1_addr[core_id];
-        dst_ptr = (uint8_t*) l1_dst_addr[core_id];
-    } else if (ext2loc == 1) {
-        // L2 to L1 transfer
-        src_ptr = (uint8_t*) l2_addr[core_id];
-        dst_ptr = (uint8_t*) l1_addr[core_id];
-    } else {
-        // L1 to L2 transfer
-        src_ptr = (uint8_t*) l1_addr[core_id];
-        dst_ptr = (uint8_t*) l2_addr[core_id];
+    l1_ptr = (uint8_t*) l1_addr[core_id];
+    l1_dst_ptr = (uint8_t*) l1_dst_addr[core_id];
+    l2_ptr = (uint8_t*) l2_addr[core_id];
+
+    for (int i = 0; i < size; i++) {
+        l1_ptr[i] = (uint8_t)(i & 0xFF);
     }
 
     for (int i = 0; i < size; i++) {
-        src_ptr[i] = (uint8_t)(i & 0xFF);
+        l1_ptr[i] = (uint8_t)((i-1) & 0xFF);
     }
-    if (loc2loc == 1) {
+
+    for (int i = 0; i < size; i++) {
+        l2_ptr[i] = (uint8_t)((size-i) & 0xFF);
+    }
+
+    if (loc2loc==0) {
         reset_cycle_count();
         start_cycle_count();
-        plp_cl_dma_wait_toL1(pulp_cl_idma_L1ToL1((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
-        stop_cycle_count();
-    } else if (ext2loc == 1) {
-        reset_cycle_count();
-        start_cycle_count();
-        plp_cl_dma_wait_toL1(pulp_cl_idma_L2ToL1((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
+        plp_dma_wait(plp_dma_memcpy(l2_addr[core_id], l1_addr[core_id], size, ext2loc));
         stop_cycle_count();
     } else {
         reset_cycle_count();
         start_cycle_count();
-        plp_cl_dma_wait_toL2(pulp_cl_idma_L1ToL2((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
+        plp_dma_wait(plp_dma_memcpy(l1_dst_addr[core_id], l1_addr[core_id], size, ext2loc));
         stop_cycle_count();
     }
     PRINTF ("This transfer took %d cycles \n", getcycles());
-
     // Check the results
-    for (int i=0; i < size; i++) {
-        uint8_t expected = src_ptr[i]; 
-        uint8_t actual   = dst_ptr[i];
 
-        if (expected != actual) {
+    for (int i=0; i < size; i++) {
+        uint8_t l1_result = l1_ptr[i]; 
+        uint8_t l2_result = l2_ptr[i];
+        uint8_t l1_dst_result = l1_dst_ptr[i];
+        if (loc2loc == 0) {
+            if (l1_result != l2_result) {
             error++;
-            if (core_id == 0) {
-                PRINTF ("Error: expected @%8x = %8x vs actual @%8x = %8x \n", expected, &src_ptr[i], actual, &dst_ptr[i]);
+                if (core_id == 0) {
+                    PRINTF ("Error: l1_result @%8x = %8x vs l2_result @%8x = %8x \n", &l1_ptr[i], l1_result, &l2_ptr[i], l2_result);
+                }
+            }
+        } else {
+            if (l1_result != l1_dst_result) {
+            error++;
+                if (core_id == 0) {
+                    PRINTF ("Error: l1_result @%8x = %8x vs l1_dst_result @%8x = %8x \n", &l1_ptr[i], l1_result, &l1_dst_ptr[i], l1_dst_result);
+                }
             }
         }
     }
@@ -60,31 +63,24 @@ int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
     return error;
 }
 
-void idma_task() {
-    PRINTF ("Core[%d] has entered idma_task \n", pi_core_id());
-    uint32_t size;
-    uint32_t transfers_num;
-    #ifdef QUICK_MODE
-    transfers_num = NB_PRESETS;
-    #else
-    transfers_num = NB_TRANSFERS;
-    #endif
-    for (int k = 0; k < transfers_num; k ++) {
-        #ifdef QUICK_MODE
-        size = idma_presets[k].size_1d;
-        #else
-        size = params_1d[k].size_1d;
-        #endif
 
-        // L1 -> L2
+void mchan_task() {
+    PRINTF ("Core[%d] has entered mchan_task \n", pi_core_id());
+    uint32_t size;
+
+    uint32_t transfers_num = NB_TRANSFERS;
+
+    for (int k=0; k < transfers_num; k++) {
+        size = params_1d[k].size_1d;
+        // MCHAN 1D L1 -> L2
         PRINTF ("L1 -> L2: Transfer %d with size %d \n", k, size);
-        glob_errors += idma_1D(size, pi_core_id(), 0, 0);
-        // L2 -> L1
+        glob_errors += mchan_1d(size, pi_core_id(), 0, 0);
+        // MCHAN 1D L2 -> L1
         PRINTF ("L2 -> L1: Transfer %d with size %d \n", k, size);
-        glob_errors += idma_1D(size, pi_core_id(), 1, 0);
-        // L1 -> L1
+        glob_errors += mchan_1d(size, pi_core_id(), 1, 0);
+        // MCHAN 1D L1 -> L1
         PRINTF ("L1 -> L1: Transfer %d with size %d \n", k, size);
-        glob_errors += idma_1D(size, pi_core_id(), 0, 1);
+        glob_errors += mchan_1d(size, pi_core_id(), 0, 1);
     }
 }
 
@@ -132,14 +128,14 @@ static void pe_entry(void *arg)
     int *errors = (int *)arg;
     allocate_mem_to_cores();
 #ifdef MULTI_CORE_P
-    idma_task();
+    mchan_task();
 #elif MULTI_CORE_S
     pi_cl_team_critical_enter();
-    idma_task();
+    mchan_task();
     pi_cl_team_critical_exit();
 #else
     if (pi_core_id() == 0) {
-        idma_task();
+        mchan_task();
     }
 #endif
     free_allocated_memory();
@@ -194,12 +190,10 @@ int test_entry()
   return errors;
 }
 
-void test_kickoff(void *arg)
-{
-  int ret = test_entry();
-  pmsis_exit(ret);
+void test_kickoff(void *arg) {
+    int ret=test_entry();
+    pmsis_exit(ret);
 }
-
 
 int main () {
     return pmsis_kickoff((void *)test_kickoff);
