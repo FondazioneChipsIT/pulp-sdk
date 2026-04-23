@@ -54,7 +54,9 @@ int idma_3D (transfer_3d transfer, int core_id, int ext2loc, int loc2loc) {
         offset_3d += (num_reps-1) * src_stride_2d + src_stride_3d;
     }
 
-
+    #ifndef MULTI_CORE_P
+    plp_idma_enable_clk();
+    #endif
     if (loc2loc == 1) {
         reset_cycle_count();
         start_cycle_count();
@@ -74,7 +76,9 @@ int idma_3D (transfer_3d transfer, int core_id, int ext2loc, int loc2loc) {
         src_stride_3d, dst_stride_3d, num_reps_3d));
         stop_cycle_count();
     }
-
+    #ifndef MULTI_CORE_P
+    plp_idma_disable_clk();
+    #endif
     PRINTF ("This transfer took %d cycles \n", getcycles());
 
     // Check the results
@@ -187,7 +191,10 @@ static void pe_entry(void *arg)
     int *errors = (int *)arg;
     allocate_mem_to_cores();
 #ifdef MULTI_CORE_P
+    plp_idma_enable_clk();
     idma_task();
+    pi_cl_team_barrier();
+    plp_idma_disable_clk();
 #elif MULTI_CORE_S
     pi_cl_team_critical_enter();
     idma_task();

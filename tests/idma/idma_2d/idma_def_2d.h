@@ -1,4 +1,4 @@
-#define NB_TRANSFERS 10
+#define NB_TRANSFERS 7
 
 typedef struct { 
   unsigned int size_2d;

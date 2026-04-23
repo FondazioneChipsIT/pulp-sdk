@@ -124,6 +124,11 @@ static inline unsigned int plp_cl_dma_status_toL1();
 
 static inline unsigned int plp_cl_dma_status_toL2();
 
+// Enables the frontend clock
+static inline void plp_idma_enable_clk();
+// Disables the frontend clock
+static inline void plp_idma_disable_clk();
+
 #if ARCHI_HAS_DMA_DEMUX
 #define DMA_DEMUX_ADDR ARCHI_IDMA_DEMUX_ADDR
 #endif
@@ -373,6 +378,20 @@ static inline void pulp_idma_transfer_2d_and_wait(unsigned int direction, unsign
     pulp_cl_idma_L1ToL2_2d(loc, ext, size, stride_loc, stride_ext, num_reps);
     plp_cl_dma_barrier_toL2();
   }
+}
+
+// CLOCK GATING CTRL
+
+static inline void plp_idma_enable_clk() {
+  uint32_t cluster_ctrl_cfg_reg;
+  cluster_ctrl_cfg_reg = plp_ctrl_cluster_cfg_get();
+  plp_ctrl_cluster_cfg_set(cluster_ctrl_cfg_reg | (1 << 17));
+}
+
+static inline void plp_idma_disable_clk() {
+  uint32_t cluster_ctrl_cfg_reg;
+  cluster_ctrl_cfg_reg = plp_ctrl_cluster_cfg_get();
+  plp_ctrl_cluster_cfg_set(cluster_ctrl_cfg_reg & (0 << 17));
 }
 
 #endif

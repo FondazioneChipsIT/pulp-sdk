@@ -26,6 +26,9 @@ int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
     for (int i = 0; i < size; i++) {
         src_ptr[i] = (uint8_t)(i & 0xFF);
     }
+    #ifndef MULTI_CORE_P
+    plp_idma_enable_clk();
+    #endif
     if (loc2loc == 1) {
         reset_cycle_count();
         start_cycle_count();
@@ -42,6 +45,9 @@ int idma_1D (uint32_t size, int core_id, int ext2loc, int loc2loc) {
         plp_cl_dma_wait_toL2(pulp_cl_idma_L1ToL2((unsigned int) src_ptr, (unsigned int) dst_ptr, size));
         stop_cycle_count();
     }
+    #ifndef MULTI_CORE_P
+    plp_idma_disable_clk();
+    #endif
     PRINTF ("This transfer took %d cycles \n", getcycles());
 
     // Check the results
@@ -132,7 +138,10 @@ static void pe_entry(void *arg)
     int *errors = (int *)arg;
     allocate_mem_to_cores();
 #ifdef MULTI_CORE_P
+    plp_idma_enable_clk();
     idma_task();
+    pi_cl_team_barrier();
+    plp_idma_disable_clk();
 #elif MULTI_CORE_S
     pi_cl_team_critical_enter();
     idma_task();
