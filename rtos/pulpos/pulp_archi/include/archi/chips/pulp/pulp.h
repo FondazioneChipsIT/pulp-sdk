@@ -35,6 +35,8 @@
 #include "archi/dma/mchan_v7.h"
 #include "archi/dma/idma_v2.h"
 #include "archi/ima/ima_v1.h"
+#include "archi/hwpe_hci_ecc/hwpe_hci_ecc.h"
+#include "archi/tcdm_scrubber/tcdm_scrubber.h"
 
 #include "archi/udma/cpi/udma_cpi_v1.h"
 #include "archi/udma/i2c/udma_i2c_v2.h"
