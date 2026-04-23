@@ -1,1 +1,4 @@
 
+[submodule "tests/neureka/pulp-nnx"]
+	path = tests/neureka/pulp-nnx
+	url = git@github.com:pulp-platform/pulp-nnx.git
