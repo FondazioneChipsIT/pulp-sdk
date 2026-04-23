@@ -76,18 +76,13 @@ int pe_entry() {
       printf ("[OK] Terminated test with no errors!!!\n");
 
     #ifndef NO_ECC
-      printf ("CORE[%d]: ECC are defined \n", core_id);
       // Check number of detected errors by ECC modules inside interconnect
       intc_data_correctable_cnt = hwpe_hci_ecc_get_data_correctable_count(cluster_id);
-      printf ("Am here 1 \n");
       intc_meta_correctable_cnt = hwpe_hci_ecc_get_meta_correctable_count(cluster_id);
-      printf ("Am here 2 \n");
       intc_data_uncorrectable_cnt = hwpe_hci_ecc_get_data_uncorrectable_count(cluster_id);
-      printf ("Am here 3 \n");
       intc_meta_uncorrectable_cnt = hwpe_hci_ecc_get_meta_uncorrectable_count(cluster_id);
-      printf ("Am here 4 \n");
+
       for (int i = 0; i < 16; i++) {
-        printf ("Inside tcdm scrubber for loop \n");
         intc_meta_correctable_cnt += tcdm_scrubber_get_mismatch_count(cluster_id, i);
       }
 
