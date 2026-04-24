@@ -46,4 +46,6 @@ else
   export MULTI_BIT_UPSET=0
 endif
 
+PULP_CFLAGS += -DUSE_PMSIS
+
 include $(RULES_DIR)/pmsis_rules.mk
