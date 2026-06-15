@@ -76,18 +76,18 @@ void pos_alloc_dump(pos_alloc_t *a)
 {
     pos_alloc_chunk_t *pt = a->first_free;
 
-    printf("======== Memory allocator state: ============\n");
+    ALLOC_TRACE(POS_LOG_TRACE, "======== Memory allocator state: ============\n");
     for (pt = a->first_free; pt; pt = pt->next)
     {
-        printf("Free Block at %8X, size: %8x, Next: %8X ", (unsigned int) pt, pt->size, (unsigned int) pt->next);
+        ALLOC_TRACE(POS_LOG_TRACE, "======== Memory allocator state: ============\n", "Free Block at %8X, size: %8x, Next: %8X ", (unsigned int) pt, pt->size, (unsigned int) pt->next);
         if (pt == pt->next)
         {
-            printf(" CORRUPTED\n"); break;
+            ALLOC_TRACE(POS_LOG_TRACE, "CORRUPTED \n"); break;
         }
         else
-            printf("\n");
+            ALLOC_TRACE(POS_LOG_TRACE, "\n");
     }
-    printf("=============================================\n");
+    ALLOC_TRACE(POS_LOG_TRACE, "=============================================\n");
 }
 
 

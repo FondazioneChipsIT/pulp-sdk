@@ -13,4 +13,9 @@ endif
 APP_CFLAGS += -Os -g
 APP_LDFLAGS += -Os -g
 
+ifdef PRINT_UART
+io = uart
+PULP_CFLAGS += -DCONFIG_IO_UART=1
+endif
+
 include $(RULES_DIR)/pmsis_rules.mk
