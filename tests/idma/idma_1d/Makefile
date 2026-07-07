@@ -23,6 +23,12 @@ ifdef QUICK_MODE
 PULP_CFLAGS += -DQUICK_MODE
 endif
 
+ifdef PRINTF_UART
+io = uart
+
+PULP_CFLAGS += -DPOS_CONFIG_IO_UART=$(CONFIG_IO_UART)
+endif
+
 include $(RULES_DIR)/pmsis_rules.mk
 
 stimuli:
