@@ -255,3 +255,22 @@ pos_set_slave_stack:
     add     sp, t4, t0
 
     ret
+
+
+#ifdef ARCHI_NO_FC
+    // void pos_cl_run_on_stack(void (*entry)(void*) a0, void *arg a1, void *stack_top a2)
+    // Run entry(arg) on the L1 task stack, then restore the caller sp.
+    .global pos_cl_run_on_stack
+pos_cl_run_on_stack:
+    andi a2, a2, -16
+    addi a2, a2, -16
+    sw   ra, 0(a2)
+    sw   sp, 8(a2)          // stash caller (L2) sp
+    mv   sp, a2
+    mv   t0, a0
+    mv   a0, a1             // a0 = arg
+    jalr t0                 // entry(arg)
+    lw   ra, 0(sp)
+    lw   sp, 8(sp)
+    ret
+#endif
