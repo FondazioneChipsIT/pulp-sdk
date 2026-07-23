@@ -90,9 +90,11 @@
  * FC
  */
 
+#ifndef ARCHI_NO_FC
 #define ARCHI_FC_CID        31
 #define ARCHI_HAS_FC_ITC     1
 #define ARCHI_HAS_FC         1
+#endif
 
 
 /*
@@ -241,6 +243,8 @@
 #define ARCHI_CL_EVT_DMA1        9
 #define ARCHI_EVT_TIMER0         10
 #define ARCHI_EVT_TIMER1         11
+#define ARCHI_EVT_TIMER0_LO      10
+#define ARCHI_EVT_TIMER0_HI      11
 #define ARCHI_CL_EVT_ACC0        12
 #define ARCHI_CL_EVT_ACC1        13
 #define ARCHI_CL_EVT_ACC2        14
