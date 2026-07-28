@@ -1,13 +1,25 @@
 CONFIG_NB_CLUSTER_PE ?= 8
 
 PULP_LDFLAGS      += 
+ifdef USE_CV32E40P
+# No xpulp ISA and no __builtin_pulp_*; downstream keys off __cv32e40p__.
+PULP_CFLAGS       +=  -D__cv32e40p__
+else
 PULP_CFLAGS       +=  -D__riscv__
+endif
 
 ifneq ($(and $(PULP_RISCV_GCC_TOOLCHAIN),$(PULP_RISCV_LLVM_TOOLCHAIN)),)	
 $(error PULP_RISCV_GCC_TOOLCHAIN and PULP_RISCV_LLVM_TOOLCHAIN cannot be set both at the same time)
 endif
 
 ifdef PULP_RISCV_GCC_TOOLCHAIN
+ifdef USE_CV32E40P
+PULP_ARCH_CFLAGS ?=  -march=rv32imfc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfhmin -mabi=ilp32f
+PULP_ARCH_LDFLAGS ?=  -march=rv32imfc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfhmin -mabi=ilp32f
+PULP_ARCH_OBJDFLAGS ?=
+PULP_CV32_LIBGCC_DIR := $(dir $(shell $(PULP_RISCV_GCC_TOOLCHAIN)/bin/riscv64-unknown-elf-gcc -march=rv32imafc -mabi=ilp32f -print-libgcc-file-name))
+PULP_LDFLAGS += -L$(PULP_CV32_LIBGCC_DIR)
+else
 ifdef CONFIG_NO_FC
 PULP_ARCH_CFLAGS ?=  -march=rv32imcxgap9 -mPE=$(CONFIG_NB_CLUSTER_PE)
 PULP_ARCH_LDFLAGS ?=  -march=rv32imcxgap9 -mPE=$(CONFIG_NB_CLUSTER_PE)
@@ -16,6 +28,7 @@ else
 PULP_ARCH_CFLAGS ?=  -march=rv32imcxgap9 -mPE=$(CONFIG_NB_CLUSTER_PE) -mFC=1
 PULP_ARCH_LDFLAGS ?=  -march=rv32imcxgap9 -mPE=$(CONFIG_NB_CLUSTER_PE) -mFC=1
 PULP_ARCH_OBJDFLAGS ?= -Mmarch=rv32imcxgap9
+endif
 endif
 endif
 
@@ -31,10 +44,18 @@ PULP_CFLAGS    += -fopenmp -mnativeomp
 endif
 PULP_LDFLAGS += -nostartfiles -nostdlib -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -lgcc
 
+ifdef USE_CV32E40P
+# CoreV GCC (OpenHW)
+PULP_CC = riscv64-unknown-elf-gcc
+PULP_AR ?= riscv64-unknown-elf-ar
+PULP_LD ?= riscv64-unknown-elf-gcc
+PULP_OBJDUMP ?= riscv64-unknown-elf-objdump
+else
 PULP_CC = riscv32-unknown-elf-gcc 
 PULP_AR ?= riscv32-unknown-elf-ar
 PULP_LD ?= riscv32-unknown-elf-gcc
 PULP_OBJDUMP ?= riscv32-unknown-elf-objdump
+endif
 
 fc/archi=riscv
 pe/archi=riscv

@@ -168,8 +168,12 @@ static inline unsigned int hal_core_id() {
 }
 
 static inline unsigned int hal_cluster_id() {
+#ifdef __cv32e40p__
+  return cluster_id();   // no __builtin_pulp_* in the CoreV toolchain
+#else
   //return cluster_id();
   return __builtin_pulp_ClusterId();
+#endif
 }
 
 // TODO replace by compiler builtin
@@ -297,11 +301,22 @@ static inline void hal_irq_enable()
 #define PCMR_ACTIVE CSR_PCMR_ACTIVE
 #define PCMR_SATURATE CSR_PCMR_SATURATE
 
+/*
+ * CV32E40P has no PCER/PCMR/PCCR (0xCC0/0xCC1/0x780+); it uses the standard
+ * counters: mcountinhibit 0x320, mhpmevent3.. 0x323.., mcycle/minstret/
+ * mhpmcounter 0xB00.. . Matches pulp-runtime hal/cv32e40p/cv32e40p.h.
+ * Note: counterId -> 0xB00+id, so id 1 reads 0 and instret is id 2.
+ */
+
 /* Configure the active events. eventMask is an OR of events got through SPR_PCER_EVENT_MASK */
 static inline void cpu_perf_conf_events(unsigned int eventMask)
 {
 #ifndef PLP_NO_PERF_COUNTERS
+#ifdef __cv32e40p__
+  asm volatile ("csrw 0x323, %0" : "+r" (eventMask));
+#else
   asm volatile ("csrw 0xCC0, %0" : "+r" (eventMask));
+#endif
 #endif
 }
 
@@ -310,7 +325,11 @@ static inline unsigned int cpu_perf_conf_events_get()
 {
 #ifndef PLP_NO_PERF_COUNTERS
   unsigned int result;
+#ifdef __cv32e40p__
+  asm volatile ("csrr %0, 0x323" : "=r" (result));
+#else
   asm volatile ("csrr %0, 0xCC0" : "=r" (result));
+#endif
   return result;
 #else
   return 0;
@@ -321,7 +340,13 @@ static inline unsigned int cpu_perf_conf_events_get()
 static inline void cpu_perf_conf(unsigned int confMask)
 {
 #ifndef PLP_NO_PERF_COUNTERS
+#ifdef __cv32e40p__
+  /* No PCMR: gate via mcountinhibit. */
+  unsigned int inhibit = (confMask & CSR_PCMR_ACTIVE) ? 0 : ~0U;
+  asm volatile ("csrw 0x320, %0" :: "r" (inhibit));
+#else
   asm volatile ("csrw 0xCC1, %0" :: "r" (confMask));
+#endif
 #endif
 }
 
@@ -349,7 +374,26 @@ static inline void cpu_perf_set(unsigned int counterId, unsigned int value) {
 /* Set all counters to the specified value */
 static inline void cpu_perf_setall(unsigned int value) {
 #ifndef PLP_NO_PERF_COUNTERS
+#ifdef __cv32e40p__
+  /* No write-all register; one by one. */
+  asm volatile ("csrw 0xB00, %0" :: "r" (value));
+  asm volatile ("csrw 0xB02, %0" :: "r" (value));
+  asm volatile ("csrw 0xB03, %0" :: "r" (value));
+  asm volatile ("csrw 0xB04, %0" :: "r" (value));
+  asm volatile ("csrw 0xB05, %0" :: "r" (value));
+  asm volatile ("csrw 0xB06, %0" :: "r" (value));
+  asm volatile ("csrw 0xB07, %0" :: "r" (value));
+  asm volatile ("csrw 0xB08, %0" :: "r" (value));
+  asm volatile ("csrw 0xB09, %0" :: "r" (value));
+  asm volatile ("csrw 0xB0A, %0" :: "r" (value));
+  asm volatile ("csrw 0xB0B, %0" :: "r" (value));
+  asm volatile ("csrw 0xB0C, %0" :: "r" (value));
+  asm volatile ("csrw 0xB0D, %0" :: "r" (value));
+  asm volatile ("csrw 0xB0E, %0" :: "r" (value));
+  asm volatile ("csrw 0xB0F, %0" :: "r" (value));
+#else
   asm volatile ("csrw 0x79F, %0" :: "r" (value));
+#endif
 #endif
 }
 
@@ -358,6 +402,27 @@ static inline unsigned int cpu_perf_get(const unsigned int counterId) {
 #ifndef PLP_NO_PERF_COUNTERS
   unsigned int value = 0;
 
+#ifdef __cv32e40p__
+  switch(counterId) {
+   case  0: asm volatile ("csrr %0, 0xB00" : "=r" (value)); break;  // mcycle
+   case  1: break;                                                  // not implemented
+   case  2: asm volatile ("csrr %0, 0xB02" : "=r" (value)); break;  // minstret
+   case  3: asm volatile ("csrr %0, 0xB03" : "=r" (value)); break;
+   case  4: asm volatile ("csrr %0, 0xB04" : "=r" (value)); break;
+   case  5: asm volatile ("csrr %0, 0xB05" : "=r" (value)); break;
+   case  6: asm volatile ("csrr %0, 0xB06" : "=r" (value)); break;
+   case  7: asm volatile ("csrr %0, 0xB07" : "=r" (value)); break;
+   case  8: asm volatile ("csrr %0, 0xB08" : "=r" (value)); break;
+   case  9: asm volatile ("csrr %0, 0xB09" : "=r" (value)); break;
+   case 10: asm volatile ("csrr %0, 0xB0A" : "=r" (value)); break;
+   case 11: asm volatile ("csrr %0, 0xB0B" : "=r" (value)); break;
+   case 12: asm volatile ("csrr %0, 0xB0C" : "=r" (value)); break;
+   case 13: asm volatile ("csrr %0, 0xB0D" : "=r" (value)); break;
+   case 14: asm volatile ("csrr %0, 0xB0E" : "=r" (value)); break;
+   case 15: asm volatile ("csrr %0, 0xB0F" : "=r" (value)); break;
+  }
+  return value;
+#else
   // This is stupid! But I really don't know how else we could do that
   switch(counterId) {
    case  0: asm volatile ("csrr %0, 0x780" : "=r" (value)); break;
@@ -393,6 +458,7 @@ static inline unsigned int cpu_perf_get(const unsigned int counterId) {
    case 30: asm volatile ("csrr %0, 0x79E" : "=r" (value)); break;
   }
   return value;
+#endif
 #else
   return 0;
 #endif
@@ -442,7 +508,7 @@ static inline void cpu_stack_check_disable()
 
 
 
-#if !defined(RV_ISA_RV32)
+#if !defined(RV_ISA_RV32) && !defined(__cv32e40p__)
 
 /* Packing of scalars into vectors */
 #define __builtin_pack2(x, y)    __builtin_pulp_pack2((signed short)   (x), (signed short)   (y))
@@ -533,7 +599,7 @@ static inline unsigned int bi_ExtInsMaskFast(unsigned int Size, unsigned int Off
 #define __builtin_bitinsert_r(dst, src, size, off)   __builtin_pulp_binsert_r((dst), (src), bi_ExtInsMaskFast((size), (off)))
 
 /* 1 bit rotation to the right, 32 bits input */
-#define __builtin_rotr(x)      __builtin_pulp_rotr((x))
+#define __builtin_rotr(x)      __builtin_pulp_rotr((x), 1)
 
 /* Add with normalization and rounding */
 #define __builtin_addroundnormu(x, y, scale) __builtin_pulp_adduRN((x), (y), (scale), (1<<((scale)-1)))
@@ -632,8 +698,10 @@ static inline unsigned int bi_ExtInsMaskFast(unsigned int Size, unsigned int Off
 #define __builtin_sumdotpus4(x, y, z)  ((z)+(x)[0]*(y)[0] + (x)[1]*(y)[1] + (x)[2]*(y)[2] + (x)[3]*(y)[3])
 
 
-/* Position of the most significant bit of x */
+// Position of the most significant bit of x.
+#ifndef __FL1
 #define __FL1(x)     (31 - __builtin_clz((x)))
+#endif
 
 /* Number of sign bits */
 static inline unsigned int __builtin_clb(unsigned int x) {
@@ -665,5 +733,13 @@ static inline unsigned int __builtin_clb(unsigned int x) {
 #define __builtin_roundnorm(x, scale)  ((int)((x) + (1<<((scale)-1)))>>(scale))
 
 #endif
+
+/* Must come last: overrides the emulated macros above with native CoreV
+ * intrinsics wherever one exists. */
+#include "archi/riscv/builtins_cv32e40p.h"
+
+/* Legacy __builtin_pulp_* names for third-party code (pulp-nn-mixed, Deeploy).
+ * Must follow builtins_cv32e40p.h -- it forwards pack4 to __builtin_pack4. */
+#include "archi/riscv/builtins_pulp_compat.h"
 
 #endif
