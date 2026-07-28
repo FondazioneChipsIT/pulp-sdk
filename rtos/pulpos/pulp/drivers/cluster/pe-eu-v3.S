@@ -19,6 +19,7 @@
  */
 
 #include <pos/data/data.h>
+#include <archi/riscv/xpulp_asm.h>
 
     .section .cluster.text , "ax"
 
@@ -142,7 +143,7 @@ pos_master_no_slave_barrier:
 
     // Set stack on slaves
     // For that we push first the function for setting stack, then the stack size and the base
-    p.beqimm t5, 0, pos_master_loop_no_slave
+    XPULP_BEQIMM t5, 0, pos_master_loop_no_slave
     sw      s10, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
     sw      t2, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
     sw      sp, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
@@ -155,7 +156,7 @@ pos_master_loop_no_slave:
 
 pos_master_sleep:
     sw      s4, EU_CORE_MASK_OR(s3)
-    p.elw   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+    XPULP_ELW   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
     sw      s4, EU_CORE_MASK_AND(s3)
     j       pos_master_loop
 
@@ -163,7 +164,7 @@ pos_master_sleep:
 
 pos_push_event_to_fc_wait:
     sw      s4, EU_CORE_MASK_OR(s3)
-    p.elw   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+    XPULP_ELW   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
     sw      s4, EU_CORE_MASK_AND(s3)
     j       pos_push_event_to_fc_retry
 
@@ -210,16 +211,16 @@ pos_fork_return:
 #ifdef ARCHI_HAS_CC
     // When the cluster has a controller barrier 0 is used for normal team barrier
     // and barrier 1 is used for end of offload
-    p.elw   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR + EU_BARRIER_SIZE(s2)
+    XPULP_ELW   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR + EU_BARRIER_SIZE(s2)
 #else
-    p.elw   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR(s2)
+    XPULP_ELW   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR(s2)
 #endif    
 
 pos_wait_for_dispatch:
 
     // Wait for PC + arg information from dispatcher
-    p.elw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
-    p.elw   a0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    XPULP_ELW   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    XPULP_ELW   a0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
 
     // Check if this is an entry with a barrier at the end (fork entry)
     andi    t1, t0, 1
@@ -243,7 +244,7 @@ pos_other_entry:
 pos_set_slave_stack:
 
     // Multiply the stack size by the core ID and add the stack base to get our stack
-    p.elw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    XPULP_ELW   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
 #if defined(CONFIG_PULP)
     addi     t5, s3, 0
 #else

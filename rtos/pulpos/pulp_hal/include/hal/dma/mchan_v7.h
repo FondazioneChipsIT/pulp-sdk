@@ -293,7 +293,14 @@ static inline unsigned int plp_dma_getCmd(int ext2loc, unsigned int size, int is
   res = __builtin_bitinsert(res, (ext2loc && is2D),        1, MCHAN_CMD_CMD__2D_TCDM_BIT);
   return res;
 #else
-  return (ext2loc << MCHAN_CMD_CMD_TYPE_BIT) | (PLP_DMA_INC << MCHAN_CMD_CMD_INC_BIT) | (is2D << MCHAN_CMD_CMD__2D_EXT_BIT) | (size << MCHAN_CMD_CMD_LEN_BIT) | (trigEvt<<MCHAN_CMD_ELE_BIT) | (trigIrq<<MCHAN_CMD_ILE_BIT) | (broadcast<<MCHAN_CMD_CMD_BLE_BIT);
+  return (((unsigned int)(ext2loc != 0))            << MCHAN_CMD_CMD_TYPE_BIT)
+       | (((unsigned int)(PLP_DMA_INC))             << MCHAN_CMD_CMD_INC_BIT)
+       | (((unsigned int)(!ext2loc && is2D))        << MCHAN_CMD_CMD__2D_EXT_BIT)
+       | ((size & ((1U << MCHAN_CMD_CMD_LEN_WIDTH) - 1)) << MCHAN_CMD_CMD_LEN_BIT)
+       | (((unsigned int)(trigEvt != 0))            << MCHAN_CMD_CMD_ELE_BIT)
+       | (((unsigned int)(trigIrq != 0))            << MCHAN_CMD_CMD_ILE_BIT)
+       | (((unsigned int)(broadcast != 0))          << MCHAN_CMD_CMD_BLE_BIT)
+       | (((unsigned int)(ext2loc && is2D))         << MCHAN_CMD_CMD__2D_TCDM_BIT);
 #endif
 }
 

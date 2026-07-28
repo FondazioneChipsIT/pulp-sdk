@@ -29,7 +29,10 @@
 #define CONFIG_PULP 1
 #define PULP_CHIP_STR pulp
 #define PULP_CHIP_FAMILY_STR pulp
+// CV32E40P: no xpulpv2 builtins, fall back to builtins_v2_emu.h. 
+#ifndef __cv32e40p__
 #define ARCHI_CORE_HAS_PULPV2 1
+#endif
 
 #define ARCHI_CORE_HAS_1_10 1
 

@@ -26,7 +26,13 @@ pos_init_entry:
 
     # Performance counters are active after reset, deactivate them to let the
     # user control when they should start counting
+#ifdef __cv32e40p__
+    # No PCMR on CV32E40P; use mcountinhibit.
+    li      t0, -1
+    csrw    0x320, t0
+#else
     csrw    0xCC1, x0
+#endif
 #ifdef ARCHI_NO_FC
     csrr    a0, 0xF14
     andi    a1, a0, 0x1f         # core offset within the cluster
