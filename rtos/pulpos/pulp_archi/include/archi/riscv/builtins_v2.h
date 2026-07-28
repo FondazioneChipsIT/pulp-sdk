@@ -260,7 +260,7 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 #define __BITINSERT_R_SAFE(dst, src, size, off) 	__builtin_pulp_binsert_r((dst), (src), __ExtInsMaskSafe((size), (off)))
 
 /* 1 bit rotation to the right, 32 bits input */
-#define __ROTR(x)			__builtin_pulp_rotr((x))
+#define __ROTR(x)			__builtin_pulp_rotr((x), 1)   /* rotate by 1, as the emulated form */
 
 /* Add with normalization */
 #define __ADDNORMU(x, y, scale)		__builtin_pulp_adduN((x), (y), (scale))
