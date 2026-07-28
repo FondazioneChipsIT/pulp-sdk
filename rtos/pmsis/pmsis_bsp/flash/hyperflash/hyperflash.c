@@ -138,7 +138,21 @@ static int hyperflash_open(struct pi_device *device)
     goto error;
   }
 
-  struct pi_hyper_conf hyper_conf = {0};
+  /* TEMPORARY corev-gcc workaround, same shape as the fix in
+   * pmsis_bsp/fs/host_fs/semihost.c: on corev-gcc v0.2/v0.3 anything that lowers
+   * to op_by_pieces over a 12..60 byte object ICEs in maybe_postinc
+   * (expr.cc:1326). pi_hyper_conf is 28 bytes, so both `= {0}` and an inline
+   * memset() of it trip the bug -- only explicit per-field assignment avoids the
+   * by-pieces path entirely. Revert once the toolchain is fixed. */
+  struct pi_hyper_conf hyper_conf;
+  hyper_conf.device = 0;
+  hyper_conf.id = 0;
+  hyper_conf.xip_en = 0;
+  hyper_conf.cs = 0;
+  hyper_conf.type = 0;
+  hyper_conf.baudrate = 0;
+  hyper_conf.burst_length = 0;
+  hyper_conf.latency = 0;
   pi_hyper_conf_init(&hyper_conf);
 
   hyper_conf.id = (unsigned char) conf->hyper_itf;
