@@ -33,19 +33,10 @@
 #ifndef __HAL_BUILTINS_V2_EMU_H__
 #define __HAL_BUILTINS_V2_EMU_H__
 
-#ifndef ARCHI_CORE_HAS_PULPV2
+#if !defined(ARCHI_CORE_HAS_PULPV2) && !defined(ARCHI_CORE_HAS_COREV_V2)
 /* ARITHMETIC SECTION */
-typedef   signed short v2s __attribute__((vector_size (4)));
-typedef unsigned short v2u __attribute__((vector_size (4)));
+#include "archi/riscv/vector_types.h"
 
-typedef   signed char  v4s __attribute__((vector_size (4)));
-typedef unsigned char  v4u __attribute__((vector_size (4)));
-
-#ifdef __EMUL__
-typedef void * rt_pointerT;
-#else
-typedef unsigned int rt_pointerT;
-#endif
 /* Packing of scalars into vectors */
 #define __PACK2(x, y)			((v2s) {(signed short)   (x), (signed short)   (y)})
 #define __PACKU2(x, y)			((v2u) {(unsigned short) (x), (unsigned short) (y)})
@@ -260,15 +251,8 @@ typedef unsigned int rt_pointerT;
 
 /* Position of the most significant bit of x */
 /* Number of sign bits */
-#ifdef __cv32e40p__
-/* Native cv.fl1/cv.clb; __builtin_clz would call libgcc's __clzsi2, which is
- * missing from the default CoreV multilib. */
-#define __FL1(x)				(__builtin_riscv_cv_bitmanip_fl1((x)))
-#define __CLB(x)				(__builtin_riscv_cv_bitmanip_clb((x)))
-#else
 #define __FL1(x)				(31 - __builtin_clz((x)))
 #define __CLB(x)				(__builtin_clrsb((x)))
-#endif
 
 /* Bit set */
 #define __BITSET(x, size, off)		((x) | (((1<<(size))-1)<<(off)))
@@ -349,5 +333,6 @@ typedef unsigned int rt_pointerT;
 #define FIX2FP(Val, Precision)						((float) (Val) / (float) (1<<(Precision)))
 #define FP2FIXR(Val, Precision)						((int)((Val)*((1 << (Precision))-1) + 0.5))
 #define FP2FIX(Val, Precision)						((int)((Val)*((1 << (Precision))-1)))
+
 #endif
 #endif

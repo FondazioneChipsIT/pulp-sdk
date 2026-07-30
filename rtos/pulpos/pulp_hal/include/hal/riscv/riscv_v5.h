@@ -20,8 +20,8 @@
 #include "archi/pulp.h"
 
 #include "hal/riscv/types.h"
-#include "archi/riscv/builtins_v2.h"
-#include "archi/riscv/builtins_v2_emu.h"
+
+#include "archi/riscv/builtins.h"
 
 #define CSR_PCMR_ACTIVE 0x1
 
@@ -508,7 +508,9 @@ static inline void cpu_stack_check_disable()
 
 
 
-#if !defined(RV_ISA_RV32) && !defined(__cv32e40p__)
+/* Skipped entirely under COREV_V2: builtins_corev_v2.h already defines these. */
+#if defined(ARCHI_CORE_HAS_COREV_V2)
+#elif !defined(RV_ISA_RV32)
 
 /* Packing of scalars into vectors */
 #define __builtin_pack2(x, y)    __builtin_pulp_pack2((signed short)   (x), (signed short)   (y))
@@ -699,11 +701,11 @@ static inline unsigned int bi_ExtInsMaskFast(unsigned int Size, unsigned int Off
 
 
 // Position of the most significant bit of x.
-#ifndef __FL1
 #define __FL1(x)     (31 - __builtin_clz((x)))
-#endif
 
 /* Number of sign bits */
+/* Guarded like the macros around it: a provider defining __builtin_clb as a
+ * macro would otherwise expand this function's own signature. */
 static inline unsigned int __builtin_clb(unsigned int x) {
   int result = 0;
   while (x) {
@@ -733,13 +735,5 @@ static inline unsigned int __builtin_clb(unsigned int x) {
 #define __builtin_roundnorm(x, scale)  ((int)((x) + (1<<((scale)-1)))>>(scale))
 
 #endif
-
-/* Must come last: overrides the emulated macros above with native CoreV
- * intrinsics wherever one exists. */
-#include "archi/riscv/builtins_cv32e40p.h"
-
-/* Legacy __builtin_pulp_* names for third-party code (pulp-nn-mixed, Deeploy).
- * Must follow builtins_cv32e40p.h -- it forwards pack4 to __builtin_pack4. */
-#include "archi/riscv/builtins_pulp_compat.h"
 
 #endif
