@@ -77,6 +77,8 @@ static REF int ref_dotpus4(v4u a, v4s b)
 
 static REF short ref_max(short p, short q) { return p > q ? p : q; }
 static REF short ref_min(short p, short q) { return p < q ? p : q; }
+static REF unsigned short ref_maxu(unsigned short p, unsigned short q) { return p > q ? p : q; }
+static REF unsigned short ref_minu(unsigned short p, unsigned short q) { return p < q ? p : q; }
 
 static REF int ref_clip(int x, int precision)
 {
@@ -150,6 +152,13 @@ static void test_simd16(void)
                ref_max(a[0], c[0]), ref_max(a[1], c[1]));
       CHECK_V2("min2", __builtin_min2(a, c),
                ref_min(a[0], c[0]), ref_min(a[1], c[1]));
+      /* unsigned forms take the other comparison path in the ALU (cmp_signed),
+       * so they need their own vectors -- h[] spans values whose sign bit is
+       * set once reinterpreted as unsigned. */
+      CHECK_V2("maxu2", (v2s)__builtin_maxu2(au, cu),
+               (short)ref_maxu(au[0], cu[0]), (short)ref_maxu(au[1], cu[1]));
+      CHECK_V2("minu2", (v2s)__builtin_minu2(au, cu),
+               (short)ref_minu(au[0], cu[0]), (short)ref_minu(au[1], cu[1]));
       CHECK_V2("abs2", __builtin_abs2(a),
                a[0] < 0 ? -a[0] : a[0], a[1] < 0 ? -a[1] : a[1]);
       /* cv.pack puts rs1 in the HIGH half, so element order is the thing to
@@ -185,6 +194,12 @@ static void test_simd8(void)
       CHECK_V4("min4", __builtin_min4(a, c),
                a[0]<c[0]?a[0]:c[0], a[1]<c[1]?a[1]:c[1],
                a[2]<c[2]?a[2]:c[2], a[3]<c[3]?a[3]:c[3]);
+      CHECK_V4("maxu4", (v4s)__builtin_maxu4(au, cu),
+               au[0]>cu[0]?au[0]:cu[0], au[1]>cu[1]?au[1]:cu[1],
+               au[2]>cu[2]?au[2]:cu[2], au[3]>cu[3]?au[3]:cu[3]);
+      CHECK_V4("minu4", (v4s)__builtin_minu4(au, cu),
+               au[0]<cu[0]?au[0]:cu[0], au[1]<cu[1]?au[1]:cu[1],
+               au[2]<cu[2]?au[2]:cu[2], au[3]<cu[3]?au[3]:cu[3]);
       CHECK_V4("abs4", __builtin_abs4(a),
                a[0]<0?-a[0]:a[0], a[1]<0?-a[1]:a[1],
                a[2]<0?-a[2]:a[2], a[3]<0?-a[3]:a[3]);
