@@ -33,6 +33,15 @@ pos_init_entry:
 #else
     csrw    0xCC1, x0
 #endif
+
+#if defined(__riscv_flen)
+    # mstatus.FS resets to Off, and a core with a separate FP register file
+    # (F extension, as opposed to Zfinx) traps every FP instruction until
+    # software enables it.
+    li      t0, 0x2000           # mstatus.FS = Initial (bits [14:13] = 0b01)
+    csrs    mstatus, t0
+#endif
+
 #ifdef ARCHI_NO_FC
     csrr    a0, 0xF14
     andi    a1, a0, 0x1f         # core offset within the cluster
