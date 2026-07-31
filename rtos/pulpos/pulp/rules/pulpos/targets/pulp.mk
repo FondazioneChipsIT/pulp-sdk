@@ -14,11 +14,19 @@ endif
 
 ifdef PULP_RISCV_GCC_TOOLCHAIN
 ifdef USE_CV32E40P
-PULP_ARCH_CFLAGS ?=  -march=rv32imfc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfhmin -mabi=ilp32f
-PULP_ARCH_LDFLAGS ?=  -march=rv32imfc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfhmin -mabi=ilp32f
+
+PULP_CV32_PREFIX := $(if $(wildcard $(PULP_RISCV_GCC_TOOLCHAIN)/bin/riscv32-unknown-elf-gcc),riscv32-unknown-elf,riscv64-unknown-elf)
+PULP_CV32_GCC    := $(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(PULP_CV32_PREFIX)-gcc
+PULP_CV32_MARCH  := -march=rv32imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx  -mabi=ilp32
+PULP_CV32_TUNE   := $(shell $(PULP_CV32_GCC) -mtune=cv32e40p -E -x c /dev/null >/dev/null 2>&1 && echo -mtune=cv32e40p)
+
+PULP_ARCH_CFLAGS ?=  $(PULP_CV32_MARCH) $(PULP_CV32_TUNE)
+PULP_ARCH_LDFLAGS ?=  $(PULP_CV32_MARCH)
 PULP_ARCH_OBJDFLAGS ?=
-PULP_CV32_LIBGCC_DIR := $(dir $(shell $(PULP_RISCV_GCC_TOOLCHAIN)/bin/riscv64-unknown-elf-gcc -march=rv32imafc -mabi=ilp32f -print-libgcc-file-name))
-PULP_LDFLAGS += -L$(PULP_CV32_LIBGCC_DIR)
+
+ifeq ($(PULP_CV32_PREFIX),riscv64-unknown-elf)
+PULP_LDFLAGS += -L$(dir $(shell $(PULP_CV32_GCC) -march=rv32imc -mabi=ilp32 -print-libgcc-file-name))
+endif
 else
 ifdef CONFIG_NO_FC
 PULP_ARCH_CFLAGS ?=  -march=rv32imcxgap9 -mPE=$(CONFIG_NB_CLUSTER_PE)
@@ -45,13 +53,13 @@ endif
 PULP_LDFLAGS += -nostartfiles -nostdlib -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -lgcc
 
 ifdef USE_CV32E40P
-# CoreV GCC (OpenHW)
-PULP_CC = riscv64-unknown-elf-gcc
-PULP_AR ?= riscv64-unknown-elf-ar
-PULP_LD ?= riscv64-unknown-elf-gcc
-PULP_OBJDUMP ?= riscv64-unknown-elf-objdump
+# CoreV GCC (OpenHW), prefix detected above.
+PULP_CC = $(PULP_CV32_PREFIX)-gcc
+PULP_AR ?= $(PULP_CV32_PREFIX)-ar
+PULP_LD ?= $(PULP_CV32_PREFIX)-gcc
+PULP_OBJDUMP ?= $(PULP_CV32_PREFIX)-objdump
 else
-PULP_CC = riscv32-unknown-elf-gcc 
+PULP_CC = riscv32-unknown-elf-gcc
 PULP_AR ?= riscv32-unknown-elf-ar
 PULP_LD ?= riscv32-unknown-elf-gcc
 PULP_OBJDUMP ?= riscv32-unknown-elf-objdump
