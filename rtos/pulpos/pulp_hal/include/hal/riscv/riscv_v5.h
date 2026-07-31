@@ -302,18 +302,26 @@ static inline void hal_irq_enable()
 #define PCMR_SATURATE CSR_PCMR_SATURATE
 
 /*
- * CV32E40P has no PCER/PCMR/PCCR (0xCC0/0xCC1/0x780+); it uses the standard
- * counters: mcountinhibit 0x320, mhpmevent3.. 0x323.., mcycle/minstret/
- * mhpmcounter 0xB00.. . Matches pulp-runtime hal/cv32e40p/cv32e40p.h.
- * Note: counterId -> 0xB00+id, so id 1 reads 0 and instret is id 2.
+ * CV32E40P has no PCER/PCMR/PCCR. Each event gets its own mhpmcounter so the
+ * per-event read API still works -- see archi/riscv/pcer_cv32e40p.h.
  */
+#ifdef __cv32e40p__
+#include "archi/riscv/pcer_cv32e40p.h"
+#endif
 
 /* Configure the active events. eventMask is an OR of events got through SPR_PCER_EVENT_MASK */
 static inline void cpu_perf_conf_events(unsigned int eventMask)
 {
 #ifndef PLP_NO_PERF_COUNTERS
 #ifdef __cv32e40p__
-  asm volatile ("csrw 0x323, %0" : "+r" (eventMask));
+  /* One select register per event; a cleared bit stops that counter. */
+#define __CV_PERF_SEL(id, cnt, evt)                                     \
+  {                                                                     \
+    unsigned int __m = ((eventMask) >> (id)) & 1u ? (1u << (id)) : 0u;   \
+    asm volatile ("csrw " #evt ", %0" :: "r" (__m));                    \
+  }
+  CV32E40P_PERF_FOREACH(__CV_PERF_SEL)
+#undef __CV_PERF_SEL
 #else
   asm volatile ("csrw 0xCC0, %0" : "+r" (eventMask));
 #endif
@@ -326,7 +334,15 @@ static inline unsigned int cpu_perf_conf_events_get()
 #ifndef PLP_NO_PERF_COUNTERS
   unsigned int result;
 #ifdef __cv32e40p__
-  asm volatile ("csrr %0, 0x323" : "=r" (result));
+  result = 0;
+#define __CV_PERF_SEL_GET(id, cnt, evt)                                 \
+  {                                                                     \
+    unsigned int __v;                                                   \
+    asm volatile ("csrr %0, " #evt : "=r" (__v));                       \
+    if (__v) result |= 1u << (id);                                      \
+  }
+  CV32E40P_PERF_FOREACH(__CV_PERF_SEL_GET)
+#undef __CV_PERF_SEL_GET
 #else
   asm volatile ("csrr %0, 0xCC0" : "=r" (result));
 #endif
@@ -368,29 +384,30 @@ static inline void cpu_perf_stop(unsigned int conf) {
 
 /* Set the specified counter to the specified value */
 static inline void cpu_perf_set(unsigned int counterId, unsigned int value) {
-  
+#ifndef PLP_NO_PERF_COUNTERS
+#ifdef __cv32e40p__
+  switch (counterId) {
+#define __CV_PERF_SET(id, cnt, evt) \
+    case id: asm volatile ("csrw " #cnt ", %0" :: "r" (value)); break;
+    CV32E40P_PERF_FOREACH(__CV_PERF_SET)
+#undef __CV_PERF_SET
+    default: break;
+  }
+#endif
+#endif
 }
 
 /* Set all counters to the specified value */
 static inline void cpu_perf_setall(unsigned int value) {
 #ifndef PLP_NO_PERF_COUNTERS
 #ifdef __cv32e40p__
-  /* No write-all register; one by one. */
+  /* No write-all register; one by one, plus mcycle/minstret. */
   asm volatile ("csrw 0xB00, %0" :: "r" (value));
   asm volatile ("csrw 0xB02, %0" :: "r" (value));
-  asm volatile ("csrw 0xB03, %0" :: "r" (value));
-  asm volatile ("csrw 0xB04, %0" :: "r" (value));
-  asm volatile ("csrw 0xB05, %0" :: "r" (value));
-  asm volatile ("csrw 0xB06, %0" :: "r" (value));
-  asm volatile ("csrw 0xB07, %0" :: "r" (value));
-  asm volatile ("csrw 0xB08, %0" :: "r" (value));
-  asm volatile ("csrw 0xB09, %0" :: "r" (value));
-  asm volatile ("csrw 0xB0A, %0" :: "r" (value));
-  asm volatile ("csrw 0xB0B, %0" :: "r" (value));
-  asm volatile ("csrw 0xB0C, %0" :: "r" (value));
-  asm volatile ("csrw 0xB0D, %0" :: "r" (value));
-  asm volatile ("csrw 0xB0E, %0" :: "r" (value));
-  asm volatile ("csrw 0xB0F, %0" :: "r" (value));
+#define __CV_PERF_ZERO(id, cnt, evt) \
+  asm volatile ("csrw " #cnt ", %0" :: "r" (value));
+  CV32E40P_PERF_FOREACH(__CV_PERF_ZERO)
+#undef __CV_PERF_ZERO
 #else
   asm volatile ("csrw 0x79F, %0" :: "r" (value));
 #endif
@@ -403,23 +420,13 @@ static inline unsigned int cpu_perf_get(const unsigned int counterId) {
   unsigned int value = 0;
 
 #ifdef __cv32e40p__
-  switch(counterId) {
-   case  0: asm volatile ("csrr %0, 0xB00" : "=r" (value)); break;  // mcycle
-   case  1: break;                                                  // not implemented
-   case  2: asm volatile ("csrr %0, 0xB02" : "=r" (value)); break;  // minstret
-   case  3: asm volatile ("csrr %0, 0xB03" : "=r" (value)); break;
-   case  4: asm volatile ("csrr %0, 0xB04" : "=r" (value)); break;
-   case  5: asm volatile ("csrr %0, 0xB05" : "=r" (value)); break;
-   case  6: asm volatile ("csrr %0, 0xB06" : "=r" (value)); break;
-   case  7: asm volatile ("csrr %0, 0xB07" : "=r" (value)); break;
-   case  8: asm volatile ("csrr %0, 0xB08" : "=r" (value)); break;
-   case  9: asm volatile ("csrr %0, 0xB09" : "=r" (value)); break;
-   case 10: asm volatile ("csrr %0, 0xB0A" : "=r" (value)); break;
-   case 11: asm volatile ("csrr %0, 0xB0B" : "=r" (value)); break;
-   case 12: asm volatile ("csrr %0, 0xB0C" : "=r" (value)); break;
-   case 13: asm volatile ("csrr %0, 0xB0D" : "=r" (value)); break;
-   case 14: asm volatile ("csrr %0, 0xB0E" : "=r" (value)); break;
-   case 15: asm volatile ("csrr %0, 0xB0F" : "=r" (value)); break;
+  /* counterId is the event id: event N lives in mhpmcounter(3+N). */
+  switch (counterId) {
+#define __CV_PERF_GET(id, cnt, evt) \
+    case id: asm volatile ("csrr %0, " #cnt : "=r" (value)); break;
+    CV32E40P_PERF_FOREACH(__CV_PERF_GET)
+#undef __CV_PERF_GET
+    default: break;
   }
   return value;
 #else
