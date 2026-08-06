@@ -179,6 +179,7 @@
 #define __builtin_pulp_ff1(x)  __FF1((x))
 #define __builtin_pulp_fl1(x)  __FL1((x))
 #define __builtin_pulp_clb(x)  __CLB((x))
+#define __builtin_pulp_cnt(x)  __CNT((x))
 /* pulp's rotr takes the amount; __ROTR fixes it at 1. */
 #define __builtin_pulp_rotr(x, n) __builtin_riscv_cv_bitmanip_ror((unsigned int)(x), (n))
 
