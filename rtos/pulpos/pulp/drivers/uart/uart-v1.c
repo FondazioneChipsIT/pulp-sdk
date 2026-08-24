@@ -25,7 +25,7 @@
 /* TEMPORARY: corev-gcc segfaults in hwloop_setupi_p (corev.cc) turning the
  * pos_uart_wait_tx_done polling loops into hardware loops. Revert when the
  * toolchain is fixed. Per-file, so hwloops stay on everywhere else. */
-#pragma GCC optimize("no-branch-count-reg")
+// #pragma GCC optimize("no-branch-count-reg")
 #endif
 
 #define POS_UART_BAUDRATE 115200

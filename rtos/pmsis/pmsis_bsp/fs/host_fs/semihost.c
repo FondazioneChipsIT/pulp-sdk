@@ -26,7 +26,7 @@
  * 12..60 byte object lowered by op_by_pieces -- USE_STORE_POST_INCREMENT
  * returns 1 while HAVE_POST_INCREMENT is 0. -Os calls memset instead. Revert
  * when the toolchain is fixed. */
-#pragma GCC optimize("Os")
+//#pragma GCC optimize("Os")
 #endif
 
 // roughly this is the last stage of printf:
