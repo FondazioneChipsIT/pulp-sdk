@@ -62,7 +62,7 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 #define __MINU2(x, y) __cv_v2u_of_u(__builtin_riscv_cv_simd_minu_h(__cv_u_of_v2u(x), __cv_u_of_v2u(y)))
 
 #define __ABS2(x) __cv_v2s_of_u(__builtin_riscv_cv_simd_abs_h(__cv_u_of_v2s(x)))
-#define __NEG2(x) __cv_v2s_of_u(__builtin_riscv_cv_simd_neg_h(__cv_u_of_v2s(x)))
+#define __NEG2(x) __cv_v2s_of_u(__builtin_riscv_cv_simd_sub_h(0u, __cv_u_of_v2s(x), 0))
 
 #define __AND2(x, y)  __cv_v2s_of_u(__builtin_riscv_cv_simd_and_h(__cv_u_of_v2s(x), __cv_u_of_v2s(y)))
 #define __OR2(x, y)   __cv_v2s_of_u(__builtin_riscv_cv_simd_or_h (__cv_u_of_v2s(x), __cv_u_of_v2s(y)))
@@ -84,7 +84,7 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 #define __MINU4(x, y) __cv_v4u_of_u(__builtin_riscv_cv_simd_minu_b(__cv_u_of_v4u(x), __cv_u_of_v4u(y)))
 
 #define __ABS4(x) __cv_v4s_of_u(__builtin_riscv_cv_simd_abs_b(__cv_u_of_v4s(x)))
-#define __NEG4(x) __cv_v4s_of_u(__builtin_riscv_cv_simd_neg_b(__cv_u_of_v4s(x)))
+#define __NEG4(x) __cv_v4s_of_u(__builtin_riscv_cv_simd_sub_b(0u, __cv_u_of_v4s(x)))
 
 #define __AND4(x, y)  __cv_v4s_of_u(__builtin_riscv_cv_simd_and_b(__cv_u_of_v4s(x), __cv_u_of_v4s(y)))
 #define __OR4(x, y)   __cv_v4s_of_u(__builtin_riscv_cv_simd_or_b (__cv_u_of_v4s(x), __cv_u_of_v4s(y)))
@@ -216,7 +216,7 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 #define __ROUNDNORMU(x, scale)     __builtin_riscv_cv_alu_adduRN((unsigned int)(x), 0u, (scale))
 #define __ROUNDNORMU_REG(x, scale) __builtin_riscv_cv_alu_adduRN((unsigned int)(x), 0u, (scale))
 
-#define __MAX(a, b) __builtin_riscv_cv_alu_max((int)(a), (int)(b))
+#define __MAX(a, b) (((int)(a) > (int)(b)) ? ((int)a) : ((int)b))
 
 /* ==== Bit manipulation (cv.bset/bclr/extract/insert/ff1/fl1/clb/ror) ==== */
 
@@ -242,12 +242,21 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 #define __BITINSERT_R(dst, src, size, off)      __builtin_riscv_cv_bitmanip_insert((unsigned int)(dst), __ExtInsMaskFast((size), (off)), (unsigned int)(src))
 #define __BITINSERT_R_SAFE(dst, src, size, off) __builtin_riscv_cv_bitmanip_insert((unsigned int)(dst), __ExtInsMaskSafe((size), (off)), (unsigned int)(src))
 
-#define __FF1(x) __builtin_riscv_cv_bitmanip_ff1((unsigned int)(x))
-#define __FL1(x) __builtin_riscv_cv_bitmanip_fl1((unsigned int)(x))
+#define __FF1(x) ((unsigned int)__builtin_ctz((unsigned int)(x)))
+static inline unsigned int __cv_fl1(unsigned int x)
+{
+    unsigned int result;
+
+    __asm__("cv.fl1 %0, %1"
+            : "=r"(result)
+            : "r"(x));
+
+    return result;
+}
+#define __FL1(x) __cv_fl1((unsigned int)(x))
 #define __CLB(x) ((unsigned int)__builtin_riscv_cv_bitmanip_clb((unsigned int)(x)))
-#define __CNT(x) __builtin_riscv_cv_bitmanip_cnt((unsigned int)(x))
-/* pulp's rotr is a rotate by one; cv.ror takes the amount in a register. */
-#define __ROTR(x) __builtin_riscv_cv_bitmanip_ror((unsigned int)(x), 1)
+#define __CNT(x) ((unsigned int)__builtin_popcount((unsigned int)(x)))
+#define __ROTR(x) ((unsigned int)__builtin_rotateright32((unsigned int)(x), 1u))
 
 /* ==== Core / SPR access ================================================ */
 
