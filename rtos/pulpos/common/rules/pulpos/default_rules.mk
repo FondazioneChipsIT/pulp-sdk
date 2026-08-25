@@ -409,29 +409,45 @@ $(TARGET_BUILD_DIR)/stdout:
 $(TARGET_BUILD_DIR)/fs:
 	mkdir -p $@
 
-run: $(TARGET_BUILD_DIR)/modelsim.ini $(TARGET_BUILD_DIR)/work  $(TARGET_BUILD_DIR)/boot $(TARGET_BUILD_DIR)/tcl_files $(TARGET_BUILD_DIR)/stdout $(TARGET_BUILD_DIR)/fs $(TARGET_BUILD_DIR)/waves
-	$(PULP_SDK_HOME)/bin/stim_utils.py --binary=$(TARGETS) --vectors=$(TARGET_BUILD_DIR)/vectors/stim.txt
-	$(PULP_SDK_HOME)/bin/plp_mkflash  --flash-boot-binary=$(TARGETS)  --stimuli=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm --flash-type=spi --qpi
-	$(PULP_SDK_HOME)/bin/slm_hyper.py  --input=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm  --output=$(TARGET_BUILD_DIR)/vectors/hyper_stim.slm
-	cd $(TARGET_BUILD_DIR) && export VSIM_RUNNER_FLAGS='+ENTRY_POINT=0x1c008080 -permit_unmatched_virtual_intf -gBAUDRATE=115200 -gLOAD_L2=JTAG' && vsim -64 -c -do 'source $(VSIM_PATH)/tcl_files/config/run_and_exit.tcl' -do 'source $(VSIM_PATH)/tcl_files/run.tcl; run_and_exit;'
+POS_RTL_DEPS = $(TARGET_BUILD_DIR)/modelsim.ini $(TARGET_BUILD_DIR)/work $(TARGET_BUILD_DIR)/boot \
+               $(TARGET_BUILD_DIR)/tcl_files $(TARGET_BUILD_DIR)/stdout $(TARGET_BUILD_DIR)/fs \
+               $(TARGET_BUILD_DIR)/waves
 
-run_gui: $(TARGET_BUILD_DIR)/modelsim.ini $(TARGET_BUILD_DIR)/work  $(TARGET_BUILD_DIR)/boot $(TARGET_BUILD_DIR)/tcl_files $(TARGET_BUILD_DIR)/stdout $(TARGET_BUILD_DIR)/fs $(TARGET_BUILD_DIR)/waves
-	$(PULP_SDK_HOME)/bin/stim_utils.py --binary=$(TARGETS) --vectors=$(TARGET_BUILD_DIR)/vectors/stim.txt
-	$(PULP_SDK_HOME)/bin/plp_mkflash  --flash-boot-binary=$(TARGETS)  --stimuli=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm --flash-type=spi --qpi
-	$(PULP_SDK_HOME)/bin/slm_hyper.py  --input=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm  --output=$(TARGET_BUILD_DIR)/vectors/hyper_stim.slm
-	cd $(TARGET_BUILD_DIR) && export VSIM_RUNNER_FLAGS='+ENTRY_POINT=0x1c008080 -permit_unmatched_virtual_intf -gBAUDRATE=115200 -gLOAD_L2=JTAG' && vsim -64 -do 'source $(VSIM_PATH)/tcl_files/run_gui.tcl; run;'
+POS_VSIM_ENV = export VSIM_RUNNER_FLAGS='+ENTRY_POINT=0x1c008080 -permit_unmatched_virtual_intf -gBAUDRATE=115200 -gLOAD_L2=JTAG'
 
-run_cluster: $(TARGET_BUILD_DIR)/modelsim.ini $(TARGET_BUILD_DIR)/work  $(TARGET_BUILD_DIR)/boot $(TARGET_BUILD_DIR)/tcl_files $(TARGET_BUILD_DIR)/stdout $(TARGET_BUILD_DIR)/fs $(TARGET_BUILD_DIR)/waves
-	$(PULP_SDK_HOME)/bin/stim_utils.py --binary=$(TARGETS) --vectors=$(TARGET_BUILD_DIR)/vectors/stim.txt
-	$(PULP_SDK_HOME)/bin/plp_mkflash  --flash-boot-binary=$(TARGETS)  --stimuli=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm --flash-type=spi --qpi
-	$(PULP_SDK_HOME)/bin/slm_hyper.py  --input=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm  --output=$(TARGET_BUILD_DIR)/vectors/hyper_stim.slm
-	cd $(TARGET_BUILD_DIR) && export VSIM_RUNNER_FLAGS='+ENTRY_POINT=0x1c008080 -permit_unmatched_virtual_intf -gBAUDRATE=115200 -gLOAD_L2=JTAG' && vsim -64 -c -do 'source $(VSIM_PATH)/scripts/run_and_exit.tcl'
+define POS_GEN_STIMULI
+$(PULP_SDK_HOME)/bin/stim_utils.py --binary=$(TARGETS) --vectors=$(TARGET_BUILD_DIR)/vectors/stim.txt
+$(PULP_SDK_HOME)/bin/plp_mkflash --flash-boot-binary=$(TARGETS) --stimuli=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm --flash-type=spi --qpi
+$(PULP_SDK_HOME)/bin/slm_hyper.py --input=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm --output=$(TARGET_BUILD_DIR)/vectors/hyper_stim.slm
+endef
 
-run_cluster_gui: $(TARGET_BUILD_DIR)/modelsim.ini $(TARGET_BUILD_DIR)/work  $(TARGET_BUILD_DIR)/boot $(TARGET_BUILD_DIR)/tcl_files $(TARGET_BUILD_DIR)/stdout $(TARGET_BUILD_DIR)/fs $(TARGET_BUILD_DIR)/waves
-	$(PULP_SDK_HOME)/bin/stim_utils.py --binary=$(TARGETS) --vectors=$(TARGET_BUILD_DIR)/vectors/stim.txt
-	$(PULP_SDK_HOME)/bin/plp_mkflash  --flash-boot-binary=$(TARGETS)  --stimuli=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm --flash-type=spi --qpi
-	$(PULP_SDK_HOME)/bin/slm_hyper.py  --input=$(TARGET_BUILD_DIR)/vectors/qspi_stim.slm  --output=$(TARGET_BUILD_DIR)/vectors/hyper_stim.slm
-	cd $(TARGET_BUILD_DIR) && export VSIM_RUNNER_FLAGS='+ENTRY_POINT=0x1c008080 -permit_unmatched_virtual_intf -gBAUDRATE=115200 -gLOAD_L2=JTAG' && vsim -64 -do 'source $(VSIM_PATH)/scripts/start.tcl'
+ifdef CONFIG_NO_FC
+
+# No FC (pulp_cluster): the cluster testbench takes the ELF through a TCL
+# variable and reports failure in the transcript rather than the exit code.
+run: $(POS_RTL_DEPS)
+	$(POS_GEN_STIMULI)
+	cd $(TARGET_BUILD_DIR) && mkdir -p build/test && ln -sf $(TARGETS) build/test/test
+	cd $(TARGET_BUILD_DIR) && $(POS_VSIM_ENV) && vsim -64 -c -do 'set VSIM_PATH $(VSIM_PATH); set APP $(TARGET_BUILD_DIR)/test/test; source $(VSIM_PATH)/scripts/run_and_exit.tcl'
+	@if grep -q " Test not passed" $(TARGET_BUILD_DIR)/transcript; then exit 1; fi
+
+run_gui: $(POS_RTL_DEPS)
+	$(POS_GEN_STIMULI)
+	cd $(TARGET_BUILD_DIR) && mkdir -p build/test && ln -sf $(TARGETS) build/test/test
+	cd $(TARGET_BUILD_DIR) && $(POS_VSIM_ENV) && vsim -64 -do 'set VSIM_PATH $(VSIM_PATH); set APP $(TARGET_BUILD_DIR)/test/test; source $(VSIM_PATH)/scripts/start.tcl'
+
+else
+
+# FC present (pulp-open): the SoC testbench loads the ELF itself.
+run: $(POS_RTL_DEPS)
+	$(POS_GEN_STIMULI)
+	cd $(TARGET_BUILD_DIR) && $(POS_VSIM_ENV) && vsim -64 -c -do 'source $(VSIM_PATH)/tcl_files/config/run_and_exit.tcl' -do 'source $(VSIM_PATH)/tcl_files/run.tcl; run_and_exit;'
+
+run_gui: $(POS_RTL_DEPS)
+	$(POS_GEN_STIMULI)
+	cd $(TARGET_BUILD_DIR) && $(POS_VSIM_ENV) && vsim -64 -do 'source $(VSIM_PATH)/tcl_files/run_gui.tcl; run;'
+
+endif
 
 
 else
@@ -457,7 +473,12 @@ endif
 
 endif
 
+# image/flash only exist in the gvsoc and fpga/board branches.
+ifeq '$(platform)' 'rtl'
+all:: build
+else
 all:: build image flash
+endif
 
 clean::
 	@echo "RM  $(TARGET_BUILD_DIR)"
