@@ -10,13 +10,6 @@
 
 #include "pmsis.h"
 #include "stdio.h"
-
-#ifdef __cv32e40p__
-/* TEMPORARY: corev-gcc segfaults in hwloop_setupi_p on cluster_entry's loops
- * (dangling loop-end LABEL_REF). Revert when the toolchain is fixed. */
-#pragma GCC optimize("no-branch-count-reg")
-#endif
-
 #include "pmsis/cluster/cluster_team/cl_team.h"
 
 #define STACK_SIZE 2048
