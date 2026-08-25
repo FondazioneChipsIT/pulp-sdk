@@ -23,12 +23,6 @@
 #include "bsp/flash/hyperflash.h"
 #include "pmsis/drivers/hyperbus.h"
 
-#ifdef __cv32e40p__
-/* TEMPORARY: see the note in pmsis_bsp/fs/host_fs/semihost.c -- op_by_pieces
- * over the 28-byte pi_hyper_conf ICEs corev-gcc with xcvmem enabled. */
-#pragma GCC optimize("Os")
-#endif
-
 #define SECTOR_SIZE (1<<18)
 
 #define STALL_TASK_PROGRAM      0

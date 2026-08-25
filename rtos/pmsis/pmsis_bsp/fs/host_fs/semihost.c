@@ -21,14 +21,6 @@
 #include "semihost.h"
 #include "string.h"
 
-#ifdef __cv32e40p__
-/* TEMPORARY: with xcvmem, corev-gcc ICEs in maybe_postinc (expr.cc) on any
- * 12..60 byte object lowered by op_by_pieces -- USE_STORE_POST_INCREMENT
- * returns 1 while HAVE_POST_INCREMENT is 0. -Os calls memset instead. Revert
- * when the toolchain is fixed. */
-#pragma GCC optimize("Os")
-#endif
-
 // roughly this is the last stage of printf:
 // print a string until '\0'
 void semihost_write0(const char *print_string)
