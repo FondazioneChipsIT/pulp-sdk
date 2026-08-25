@@ -1,15 +1,25 @@
 /*
- * Copyright (C) 2017 ETH Zurich, University of Bologna and GreenWaves Technologies
- * All rights reserved.
+ * Copyright (C) 2026 Fondazione Chips-IT
  *
- * This software may be modified and distributed under the terms
- * of the BSD license.  See the LICENSE file for details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*
  * Equivalence test for the xpulp/CoreV builtin macros.
  *
- * Every macro that archi/riscv/builtins_cv32e40p.h maps onto a native CoreV
+ * Every macro that archi/riscv/builtins_corev_v2.h maps onto a native CoreV
  * intrinsic is computed twice: once through the macro (which on the CV32E40P
  * target is the hardware instruction) and once through an independent pure-C
  * reference written out longhand below. Any mismatch is an error, so a wrong
