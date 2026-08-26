@@ -73,7 +73,7 @@ endif
 ifdef PULP_RISCV_GCC_TOOLCHAIN
 PULP_LDFLAGS += -nostartfiles -nostdlib -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -lgcc
 else
-PULP_LDFLAGS += -nostartfiles -nostdlib -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -fuse-ld=lld -lc
+PULP_LDFLAGS += -nostartfiles -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -fuse-ld=lld --rtlib=compiler-rt -lc
 endif
 
 ifndef USE_CV32E40P
