@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 ETH Zurich
+ * Copyright (C) 2026 Fondazione Chips-IT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,30 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
+#ifndef __ARCHI_RISCV_BUILTINS_H__
+#define __ARCHI_RISCV_BUILTINS_H__
 
-/* 
- * Authors: Germain Haugou, ETH Zurich (germain.haugou@iis.ee.ethz.ch)
- */
+#include "archi/riscv/vector_types.h"
 
-#ifndef __POS__CHIPS__PULP__CONFIG_H__
-#define __POS__CHIPS__PULP__CONFIG_H__
+#include "archi/riscv/builtins_corev_v2.h"
+/* Legacy __builtin_pulp_* names for third-party code; forwards to the __XXX
+ * layer above, so it must follow it. */
+#include "archi/riscv/builtins_pulp_compat.h"
 
-#include "archi/pulp_defs.h"
-
-#define PULP_CHIP CHIP_PULP
-#define PULP_CHIP_FAMILY CHIP_PULP
-#define CONFIG_PULP 1
-#define PULP_CHIP_STR pulp
-#define PULP_CHIP_FAMILY_STR pulp
-
-#ifdef __cv32e40p__
-#define ARCHI_CORE_HAS_COREV_V2 1
-#else
-#define ARCHI_CORE_HAS_PULPV2 1
-#endif
-
-#define ARCHI_CORE_HAS_1_10 1
+#include "archi/riscv/builtins_v2.h"
+#include "archi/riscv/builtins_v2_emu.h"
 
 #endif
