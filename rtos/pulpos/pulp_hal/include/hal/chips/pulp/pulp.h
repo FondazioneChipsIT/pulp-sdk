@@ -31,6 +31,8 @@
 #include "hal/gpio/gpio_v3.h"
 #include "hal/rom/rom_v2.h"
 #include "hal/ima/ima_v1.h"
+#include "hal/tcdm_scrubber/tcdm_scrubber.h"
+#include "hal/hwpe_hci_ecc/hwpe_hci_ecc.h"
 
 #include "hal/udma/udma_v3.h"
 #include "hal/udma/cpi/udma_cpi_v1.h"
