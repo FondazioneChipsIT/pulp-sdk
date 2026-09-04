@@ -43,6 +43,28 @@ static inline unsigned int evt_read32(unsigned int base, unsigned int offset)
   __asm__ __volatile__ ("" : : : "memory");
   value = __builtin_pulp_event_unit_read_fenced((int *)base, offset);
   __asm__ __volatile__ ("" : : : "memory");
+  #elif defined(FORCE_CV_ELW)
+  /* Benchmark parity with MAGIA: force the blocking event load (cv.elw) instead
+   * of the plain lw that CONFIG_PULP would select.
+   *
+   * Why: cv.elw makes the CV32E40P sleep unit gate the core clock while it waits
+   * (COREV_CLUSTER), whereas a plain lw keeps the clock running and merely
+   * stalls the pipeline. That is not just a codegen difference -- mcycle lives
+   * in cs_registers, which is clocked by the *gated* clock, so with lw the
+   * barrier wait is counted in `cycles` and with cv.elw it is not. Comparing the
+   * two platforms' cycle counts is meaningless unless both use the same
+   * primitive. Same inline asm as MAGIA's sw/utils/event_unit_utils.h.
+   *
+   * NOTE: an earlier attempt at this showed the barrier becoming non-blocking
+   * (every core left cv.elw a fixed 8 cycles after entering, regardless of the
+   * others). Validate on a real run before trusting any number produced with
+   * this enabled: the kernels must still report PASS. */
+  __asm__ __volatile__ ("" : : : "memory");
+  {
+    unsigned int addr = base + offset;
+    __asm__ __volatile__ ("cv.elw %0, 0(%1)" : "=r" (value) : "r" (addr) : "memory");
+  }
+  __asm__ __volatile__ ("" : : : "memory");
   #else
   __asm__ __volatile__ ("" : : : "memory");
   value = pulp_read32(base + offset);
