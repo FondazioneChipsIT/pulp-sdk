@@ -244,14 +244,14 @@ int test_entry()
 {
   int errors = 0;
 
-  PRINTF("Starting test\n");
+  printf("Starting test\n");
 
   errors += test_task_sync();
 
   if (errors)
-    PRINTF("Test failure\n");
+    printf("Test failure\n");
   else
-    PRINTF("Test success\n");
+    printf("Test success\n");
 
   return errors;
 }
