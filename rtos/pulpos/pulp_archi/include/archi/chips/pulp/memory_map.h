@@ -59,7 +59,14 @@
 #define ARCHI_SOC_EU_ADDR            ( ARCHI_SOC_PERIPHERALS_ADDR + ARCHI_SOC_EU_OFFSET )
 #define ARCHI_FC_ITC_ADDR            ( ARCHI_SOC_PERIPHERALS_ADDR + ARCHI_FC_ITC_OFFSET )
 #define ARCHI_FC_TIMER_ADDR          ( ARCHI_SOC_PERIPHERALS_ADDR + ARCHI_FC_TIMER_OFFSET )
+#ifndef ARCHI_STDOUT_ADDR
+#ifdef ARCHI_NO_FC
+// standalone cluster TB exposes its UART/stdout at 0x40000000 (matches pulp-runtime)
+#define ARCHI_STDOUT_ADDR            0x40000000
+#else
 #define ARCHI_STDOUT_ADDR            ( ARCHI_SOC_PERIPHERALS_ADDR + ARCHI_STDOUT_OFFSET )
+#endif
+#endif
 
 #define ARCHI_FLL_AREA_SIZE          0x00000010
 
