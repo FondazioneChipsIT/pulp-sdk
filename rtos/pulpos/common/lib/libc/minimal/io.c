@@ -525,10 +525,15 @@ void exit(int status)
 {
     pos_init_stop();
 
+#ifdef ARCHI_NO_FC
+    hal_cluster_ctrl_return_set(hal_cluster_id(), status);
+    hal_cluster_ctrl_eoc_set(1);
+#else
     apb_soc_ctrl_corestatus_set(ARCHI_APB_SOC_CTRL_ADDR,
         APB_SOC_CTRL_CORESTATUS_EOC(1) |
         APB_SOC_CTRL_CORESTATUS_STATUS(status)
     );
+#endif
 
 #if defined(POS_CONFIG_IO_HOST) && POS_CONFIG_IO_HOST == 1
     pos_semihost_exit(status == 0 ? SEMIHOST_EXIT_SUCCESS : SEMIHOST_EXIT_ERROR);

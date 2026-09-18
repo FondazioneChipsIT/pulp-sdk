@@ -27,7 +27,13 @@ pos_init_entry:
     # Performance counters are active after reset, deactivate them to let the
     # user control when they should start counting
     csrw    0xCC1, x0
-
+#ifdef ARCHI_NO_FC
+    csrr    a0, 0xF14
+    andi    a1, a0, 0x1f         # core offset within the cluster
+    beqz    a1, pos_no_fc_core0  # core 0 -> boot as FC (fall through)
+    j       pos_pe_start         # cores 1..N-1 -> slave dispatch loop
+pos_no_fc_core0:
+#else
 #ifdef ARCHI_HAS_CLUSTER
 
     # Cluster PEs will also starts here to avoid aligning another entry point
@@ -41,6 +47,7 @@ pos_init_entry:
     j      pos_pe_start
 label0:
 
+#endif
 #endif
 
 
