@@ -1,5 +1,8 @@
 CONFIG_NB_CLUSTER_PE ?= 8
 
+# Chip variant: selects pos/chips, link.ld and soc.c (see opentitan_cluster.mk)
+POS_CHIP ?= pulp
+
 PULP_LDFLAGS      += 
 ifdef USE_CV32E40P
 # No xpulp ISA and no __builtin_pulp_*; downstream keys off __cv32e40p__.
@@ -66,15 +69,15 @@ PULP_ARCH_OBJDFLAGS ?= -Mmarch=rv32imcxpulpv2
 endif
 endif
 
-PULP_CFLAGS    += -fdata-sections -ffunction-sections -include pos/chips/pulp/config.h -I$(PULPOS_PULP_HOME)/include/pos/chips/pulp -I$(PULP_EXT_LIBS)/include
+PULP_CFLAGS    += -fdata-sections -ffunction-sections -include pos/chips/$(POS_CHIP)/config.h -I$(PULPOS_PULP_HOME)/include/pos/chips/$(POS_CHIP) -I$(PULP_EXT_LIBS)/include
 ifeq '$(CONFIG_OPENMP)' '1'
 PULP_CFLAGS    += -fopenmp -mnativeomp
 endif
 
 ifdef PULP_RISCV_GCC_TOOLCHAIN
-PULP_LDFLAGS += -nostartfiles -nostdlib -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -lgcc
+PULP_LDFLAGS += -nostartfiles -nostdlib -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/$(POS_CHIP)/link.ld -lgcc
 else
-PULP_LDFLAGS += -nostartfiles -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -fuse-ld=lld --rtlib=compiler-rt -lc
+PULP_LDFLAGS += -nostartfiles -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/$(POS_CHIP)/link.ld -fuse-ld=lld --rtlib=compiler-rt -lc
 endif
 
 ifndef USE_CV32E40P
@@ -86,7 +89,7 @@ endif
 
 fc/archi=riscv
 pe/archi=riscv
-pulp_chip=pulp
+pulp_chip=$(POS_CHIP)
 pulp_chip_family=pulp
 cluster/version=5
 fc_itc/version=1
@@ -111,7 +114,7 @@ udma/hyper/version=3
 # FLL
 PULP_SRCS     += kernel/fll-v$(fll/version).c
 PULP_SRCS     += kernel/freq-domains.c
-PULP_SRCS     += kernel/chips/pulp/soc.c
+PULP_SRCS     += kernel/chips/$(POS_CHIP)/soc.c
 
 
 include $(PULPOS_HOME)/rules/pulpos/configs/default.mk

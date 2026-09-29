@@ -250,6 +250,24 @@ static void pos_libc_putc_stdout(char c)
 }
 
 
+#if defined(POS_CONFIG_IO_HOST_UART) && POS_CONFIG_IO_HOST_UART == 1
+#ifndef ARCHI_HOST_UART_ADDR
+#error "io=host_uart needs ARCHI_HOST_UART_ADDR in the chip memory map"
+#endif
+
+// Polled 16550 owned by the host (already configured): THR at 0x0, LSR at 0x14
+static void pos_libc_putc_host_uart(char c)
+{
+    volatile uint8_t *uart = (volatile uint8_t *)ARCHI_HOST_UART_ADDR;
+
+    while (!(uart[0x14] & (1 << 5)));
+    uart[0x0] = c;
+    __asm__ volatile("fence" ::: "memory");
+    while ((uart[0x14] & 0x60) != 0x60);
+}
+#endif
+
+
 
 
 #if defined(POS_CONFIG_IO_HOST) && POS_CONFIG_IO_HOST == 1
@@ -417,6 +435,8 @@ static void pos_putc(char c)
     pos_libc_putc_uart(c);
 #elif defined(POS_CONFIG_IO_HOST) && POS_CONFIG_IO_HOST == 1
     pos_libc_putc_host(c);
+#elif defined(POS_CONFIG_IO_HOST_UART) && POS_CONFIG_IO_HOST_UART == 1
+    pos_libc_putc_host_uart(c);
 #else
     pos_libc_putc_stdout(c);
 #endif

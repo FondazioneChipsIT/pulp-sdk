@@ -89,6 +89,9 @@ endif
 ifeq '$(io)' 'uart'
 CONFIG_IO_UART = 1
 endif
+ifeq '$(io)' 'host_uart'
+CONFIG_IO_HOST_UART = 1
+endif
 endif
 
 
@@ -109,6 +112,10 @@ endif
 
 ifdef CONFIG_IO_UART
 PULP_CFLAGS += -DPOS_CONFIG_IO_UART=$(CONFIG_IO_UART)
+endif
+
+ifdef CONFIG_IO_HOST_UART
+PULP_CFLAGS += -DPOS_CONFIG_IO_HOST_UART=$(CONFIG_IO_HOST_UART)
 endif
 
 ifdef CONFIG_IO_UART_BAUDRATE

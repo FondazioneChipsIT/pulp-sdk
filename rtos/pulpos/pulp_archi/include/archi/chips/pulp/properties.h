@@ -57,7 +57,6 @@
 #define STDOUT_VERSION      2
 #define GPIO_VERSION        2
 #define EU_VERSION          3
-#define ITC_VERSION         1
 #define FLL_VERSION         1
 #define RISCV_VERSION       4
 #define MCHAN_VERSION       7
@@ -94,6 +93,8 @@
 #define ARCHI_FC_CID        31
 #define ARCHI_HAS_FC_ITC     1
 #define ARCHI_HAS_FC         1
+// ITC sits on the FC: without it irq/event helpers fall back to the EU
+#define ITC_VERSION         1
 #endif
 
 

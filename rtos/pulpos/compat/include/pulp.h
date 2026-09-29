@@ -9,6 +9,7 @@
 
 // pulp-runtime's pulp.h left these to the application; most tests call printf
 // without including stdio, which GCC 14 rejects.
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

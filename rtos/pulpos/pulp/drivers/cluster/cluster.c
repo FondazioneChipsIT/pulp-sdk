@@ -417,7 +417,7 @@ void pos_cluster_push_fc_event(pi_task_t *event)
     data->cl_tasks = event;
     #ifdef ITC_VERSION
     hal_itc_status_set(1<<POS_EVENT_FC_ENQUEUE);
-    #else
+    #elif !defined(ARCHI_NO_FC)
     eu_evt_trig(eu_evt_trig_fc_addr(POS_EVENT_FC_ENQUEUE), 0);
     #endif
 
