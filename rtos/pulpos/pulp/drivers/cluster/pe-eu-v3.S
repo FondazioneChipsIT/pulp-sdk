@@ -143,7 +143,7 @@ pos_master_no_slave_barrier:
 
     // Set stack on slaves
     // For that we push first the function for setting stack, then the stack size and the base
-    XPULP_BEQIMM t5, 0, pos_master_loop_no_slave
+    XPULP_BEQZ(t5, pos_master_loop_no_slave)
     sw      s10, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
     sw      t2, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
     sw      sp, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)

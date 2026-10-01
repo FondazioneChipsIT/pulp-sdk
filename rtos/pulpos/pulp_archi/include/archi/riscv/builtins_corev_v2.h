@@ -219,6 +219,8 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 
 /* All take the packed 10-bit field and have an immediate and a register
  * alternative, so _R / _R_SAFE differ only in how the field is built. */
+#ifdef __riscv_xcvbitmanip
+
 #define __BITSET(x, size, off)        __builtin_riscv_cv_bitmanip_bset((unsigned int)(x), __ExtInsMaskFast((size), (off)))
 #define __BITSET_R(x, size, off)      __builtin_riscv_cv_bitmanip_bset((unsigned int)(x), __ExtInsMaskFast((size), (off)))
 #define __BITSET_R_SAFE(x, size, off) __builtin_riscv_cv_bitmanip_bset((unsigned int)(x), __ExtInsMaskSafe((size), (off)))
@@ -239,7 +241,34 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 #define __BITINSERT_R(dst, src, size, off)      __builtin_riscv_cv_bitmanip_insert((unsigned int)(dst), __ExtInsMaskFast((size), (off)), (unsigned int)(src))
 #define __BITINSERT_R_SAFE(dst, src, size, off) __builtin_riscv_cv_bitmanip_insert((unsigned int)(dst), __ExtInsMaskSafe((size), (off)), (unsigned int)(src))
 
+#define __CLB(x) ((unsigned int)__builtin_riscv_cv_bitmanip_clb((unsigned int)(x)))
+
+#else   /* no xcvbitmanip */
+
+/* From archi/riscv/builtins_v2_emu.h. */
+
+#define __BITSET(x, size, off)		((x) | (((1<<(size))-1)<<(off)))
+#define __BITSET_R(x, size, off)		((x) | (((1<<(size))-1)<<(off)))
+#define __BITSET_R_SAFE(x, size, off)	((x) | (((1<<((size)&0x1F))-1)<<((off)&0x1F)))
+#define __BITCLR(x, size, off)		((x) & ~(((1<<(size))-1)<<(off)))
+#define __BITCLR_R(x, size, off)		((x) & ~(((1<<(size))-1)<<(off)))
+#define __BITCLR_R_SAFE(x, size, off)	((x) & ~(((1<<((size)&0x1F))-1)<<((off)&0x1F)))
+#define __BITEXTRACT(x, size, off) 		(((((x)>>(off))&((unsigned int)(1<<(size))-1))<<(32-(size)))>>(32-(size)))
+#define __BITEXTRACTU(x, size, off)		(((x)>>(off))&((unsigned int)(1<<(size))-1))
+#define __BITEXTRACT_R(x, size, off) 	(((((x)>>(off))&((unsigned int)(1<<(size))-1))<<(32-(size)))>>(32-(size)))
+#define __BITEXTRACTU_R(x, size, off)	(((x)>>(off))&((unsigned int)(1<<(size))-1))
+#define __BITEXTRACT_R_SAFE(x, size, off) 	(((((x)>>((off)&0x1F))&((unsigned int)(1<<((((size)>32)?32:(size))))-1))<<(32-((((size)>32)?32:(size)))))>>(32-((((size)>32)?32:(size)))))
+#define __BITEXTRACTU_R_SAFE(x, size, off)	(((x)>>((off)&0x1F))&((unsigned int)(1<<((((size)>32)?32:(size))))-1))
+#define __BITINSERT(dst, src, size, off) 	(((dst) & ~(((1<<(size))-1)<<(off))) | (((src) & ((1<<(size))-1))<<(off)))
+#define __BITINSERT_R(dst, src, size, off) 	(((dst) & ~(((1<<(size))-1)<<(off))) | (((src) & ((1<<(size))-1))<<(off)))
+#define __BITINSERT_R_SAFE(dst, src, size, off) 	(((dst) & ~(((1<<(((size)>32)?32:(size)))-1)<<((off)&0x1F))) | (((src) & ((1<<(((size)>32)?32:(size)))-1))<<((off)&0x1F)))
+#define __CLB(x)				(__builtin_clrsb((x)))
+
+#endif
+
 #define __FF1(x) ((unsigned int)__builtin_ctz((unsigned int)(x)))
+/* Generic form from archi/riscv/builtins_v2_emu.h. */
+#ifdef __riscv_xcvbitmanip
 static inline unsigned int __cv_fl1(unsigned int x)
 {
     unsigned int result;
@@ -250,8 +279,13 @@ static inline unsigned int __cv_fl1(unsigned int x)
 
     return result;
 }
+#else
+static inline unsigned int __cv_fl1(unsigned int x)
+{
+    return 31 - __builtin_clz(x);
+}
+#endif
 #define __FL1(x) __cv_fl1((unsigned int)(x))
-#define __CLB(x) ((unsigned int)__builtin_riscv_cv_bitmanip_clb((unsigned int)(x)))
 #define __CNT(x) ((unsigned int)__builtin_popcount((unsigned int)(x)))
 #define __ROTR(x) ((unsigned int)__builtin_rotateright32((unsigned int)(x), 1u))
 

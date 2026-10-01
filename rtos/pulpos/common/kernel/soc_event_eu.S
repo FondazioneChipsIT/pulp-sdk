@@ -60,7 +60,7 @@ pos_soc_event_handler_asm:
     sw  x9, 0(x10)
 
     # Extract ID part
-    XPULP_EXTRACTU x10, x8, EU_SOC_EVENTS_EVENT_MASK_BITS-1, EU_SOC_EVENTS_EVENT_MASK_OFFSET
+    XPULP_EXTRACTU(x10, x8, EU_SOC_EVENTS_EVENT_MASK_BITS-1, EU_SOC_EVENTS_EVENT_MASK_OFFSET)
 
 
 
@@ -136,7 +136,7 @@ pos_soc_event_store_asm:
     lw      x12, %tiny(pos_soc_event_status)(x11)
     andi    x10, x10, 0x1f
 
-    XPULP_BSETR x12, x12, x10
+    XPULP_BSETR(x12, x12, x10, x9)
 
     sw      x12, %tiny(pos_soc_event_status)(x11)
 

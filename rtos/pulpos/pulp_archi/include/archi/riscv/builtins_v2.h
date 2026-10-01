@@ -44,7 +44,12 @@
 #define __PACKU4(x, y, z, t)		__builtin_pulp_pack4((unsigned char) (x), (unsigned char) (y), (unsigned char) (z), (unsigned char) (t))
 
 /* Max */
+/* Generic form from builtins_v2_emu.h. */
+#ifndef PULP_NO_MINMAX
 #define __MAX(a, b)         __builtin_pulp_maxsi((a), (b))
+#else
+#define __MAX(x, y) ((x)>(y)?(x):(y))
+#endif
 
 #define __MAX2(x, y) 		__builtin_pulp_max2((x), (y))
 #define __MAX4(x, y) 		__builtin_pulp_max4((x), (y))
@@ -183,7 +188,7 @@
 #define __SUMDOTPUSSC4(x, y, z)    	__builtin_pulp_sdotuspsc4((x), (y), (z))
 
 #ifdef ARCHI_CORE_HAS_CPLX
- 
+
 /* Complex Multiplication, Q15x15 into Q15, with optional post scaling by 1 or 2 */
 #define __CPLXMULS(x, y)		__builtin_pulp_cplxmuls((x), (y))
 #define __CPLXMULSDIV2(x, y)		__builtin_pulp_cplxmulsdiv2((x), (y))
