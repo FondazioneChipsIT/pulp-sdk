@@ -50,7 +50,9 @@
 /* ---- event load: rd = [base + imm], core idle until the event ---------- */
 
 /* No generic form: it sits on the barrier path. */
-#ifdef __cv32e40p__
+#if defined(PULP_NO_EVENT_LOAD)
+#define XPULP_ELW lw
+#elif defined(__cv32e40p__)
 #define XPULP_ELW cv.elw
 #else
 #define XPULP_ELW p.elw
