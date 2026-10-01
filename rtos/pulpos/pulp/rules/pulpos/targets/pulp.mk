@@ -54,15 +54,17 @@ PULP_ARCH_CFLAGS ?=  $(PULP_CV32_MARCH) -isystem ${RISCV_SYSROOT}/include
 PULP_ARCH_LDFLAGS ?=  $(PULP_CV32_MARCH) -L${RISCV_SYSROOT}/lib
 PULP_ARCH_OBJDFLAGS ?=
 
-PULP_CC = clang
-PULP_AR ?= llvm-ar
-PULP_LD ?= clang
-PULP_OBJDUMP ?= llvm-objdump
 else
 PULP_ARCH_CFLAGS ?=   -target riscv32-unknown-elf -march=rv32imcxpulpv2 --sysroot=${PULP_RISCV_LLVM_TOOLCHAIN}/riscv32-unknown-elf -ffreestanding
 PULP_ARCH_LDFLAGS ?=  -march=rv32imcxpulpv2
 PULP_ARCH_OBJDFLAGS ?= -Mmarch=rv32imcxpulpv2
 endif
+# Outside the USE_CV32E40P branch: the tools are clang's in both SDK modes,
+# otherwise the gcc block further down reassigns them.
+PULP_CC = clang
+PULP_AR ?= llvm-ar
+PULP_LD ?= clang
+PULP_OBJDUMP ?= llvm-objdump
 endif
 
 PULP_CFLAGS    += -fdata-sections -ffunction-sections -include pos/chips/pulp/config.h -I$(PULPOS_PULP_HOME)/include/pos/chips/pulp -I$(PULP_EXT_LIBS)/include
@@ -77,10 +79,12 @@ PULP_LDFLAGS += -nostartfiles -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PU
 endif
 
 ifndef USE_CV32E40P
+ifndef PULP_RISCV_LLVM_TOOLCHAIN
 PULP_CC = riscv32-unknown-elf-gcc
 PULP_AR ?= riscv32-unknown-elf-ar
 PULP_LD ?= riscv32-unknown-elf-gcc
 PULP_OBJDUMP ?= riscv32-unknown-elf-objdump
+endif
 endif
 
 fc/archi=riscv
