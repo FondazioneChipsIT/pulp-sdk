@@ -30,7 +30,9 @@
 #define PULP_CHIP_STR pulp
 #define PULP_CHIP_FAMILY_STR pulp
 
-#ifdef __cv32e40p__
+/* Neither provider: builtins_v2_emu.h then supplies the generic forms. */
+#if defined(PULP_NO_XPULP)
+#elif defined(__cv32e40p__)
 #define ARCHI_CORE_HAS_COREV_V2 1
 #else
 #define ARCHI_CORE_HAS_PULPV2 1

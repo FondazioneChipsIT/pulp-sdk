@@ -421,7 +421,7 @@ static inline void cpu_stack_check_disable()
 
 
 
-#if !defined(RV_ISA_RV32)
+#if !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
 
 /* Packing of scalars into vectors */
 #define __builtin_pack2(x, y)    __builtin_pulp_pack2((signed short)   (x), (signed short)   (y))

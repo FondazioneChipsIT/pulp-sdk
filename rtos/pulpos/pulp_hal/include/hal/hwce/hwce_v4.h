@@ -147,7 +147,7 @@ typedef struct {
 // instead of classic load/store because otherwise the compiler is not able to correctly factorize
 // the HWCE base in case several accesses are done, ending up with twice more code
 
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
 #define HWCE_WRITE(value, offset) __builtin_pulp_OffsetedWrite(value, (int *)HWCE_ADDR_BASE, offset)
 #define HWCE_READ(offset) __builtin_pulp_OffsetedRead((int *)HWCE_ADDR_BASE, offset)
 #else
@@ -157,7 +157,7 @@ typedef struct {
 
 static inline unsigned int hwce_stride_length_value(unsigned int stride, unsigned int length) {
   unsigned int res = 0;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0,   stride, 16, 16);
   res = __builtin_bitinsert(res, length, 16, 0 );
 #endif
@@ -166,7 +166,7 @@ static inline unsigned int hwce_stride_length_value(unsigned int stride, unsigne
 
 static inline unsigned int hwce_gen_config0_value(unsigned int wstride, unsigned int ncp, unsigned int conv, unsigned vect, unsigned int uns, unsigned int ny, unsigned int nf, unsigned int qf, unsigned int rnd) {
   unsigned int res;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0, wstride, 16, 16);
   res = __builtin_bitinsert(res, rnd    , 1 , 14);
   res = __builtin_bitinsert(res, ncp    , 1 , 13);
@@ -182,7 +182,7 @@ static inline unsigned int hwce_gen_config0_value(unsigned int wstride, unsigned
  
 static inline unsigned int hwce_gen_config1_value(unsigned int pixshiftr, unsigned int pixmode, unsigned int pixshiftl) {
   unsigned int res;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0, pixshiftr, 5, 16);
   res = __builtin_bitinsert(res, pixmode  , 2, 8);
   res = __builtin_bitinsert(res, pixshiftl, 5, 0);
@@ -192,7 +192,7 @@ static inline unsigned int hwce_gen_config1_value(unsigned int pixshiftr, unsign
  
 static inline unsigned int hwce_job_config0_value(unsigned int noyconst, unsigned int lbuflen) {
   unsigned int res = 0;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0, noyconst, 16, 16);
   res = __builtin_bitinsert(res, lbuflen , 10, 0);
 #endif
@@ -201,7 +201,7 @@ static inline unsigned int hwce_job_config0_value(unsigned int noyconst, unsigne
  
 static inline unsigned int hwce_job_config1_value(unsigned int lo, unsigned int wif, unsigned int wof, unsigned int vect_disable_mask) {
   unsigned int res;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0, lo                 , 2 , 24);
   res = __builtin_bitinsert(res, wif              , 6 , 16);
   res = __builtin_bitinsert(res, wof              , 6, 8);

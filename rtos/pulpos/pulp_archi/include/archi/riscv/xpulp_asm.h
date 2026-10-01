@@ -26,7 +26,8 @@
 
 /* ---- which extensions may we use -------------------------------------- */
 
-#ifdef __cv32e40p__
+#if defined(PULP_NO_XPULP)   /* none: every macro takes its generic form */
+#elif defined(__cv32e40p__)
 
 #ifdef __riscv_xcvmem
 #define XPULP_HAS_MEM 1

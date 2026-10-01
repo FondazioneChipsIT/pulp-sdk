@@ -81,7 +81,7 @@
 // instead of classic load/store because otherwise the compiler is not able to correctly factorize
 // the XNE base in case several accesses are done, ending up with twice more code
 
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
 #define XNE_WRITE(value, offset) __builtin_pulp_OffsetedWrite(value, (int *)XNE_ADDR_BASE, offset)
 #define XNE_READ(offset) __builtin_pulp_OffsetedRead((int *)XNE_ADDR_BASE, offset)
 #else
@@ -132,7 +132,7 @@ static inline unsigned int xne_ucode_static0_value(
   unsigned char ow
 ) {
   unsigned int res = 0;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0,   w,  8, 24);
   res = __builtin_bitinsert(res, h,  8, 16);
   res = __builtin_bitinsert(res, ow, 8,  8);
@@ -152,7 +152,7 @@ static inline unsigned int xne_ucode_static1_value(
   unsigned char acc
 ) {
   unsigned int res = 0;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0,   fs0,  8, 24);
   res = __builtin_bitinsert(res, fs1,  8, 16);
   res = __builtin_bitinsert(res, acc,  8, 0);
@@ -169,7 +169,7 @@ static inline unsigned int xne_ucode_static2_value(
   unsigned short nof
 ) {
   unsigned int res = 0;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0,   nif, 16, 16);
   res = __builtin_bitinsert(res, nof, 16,  0);
 #else
@@ -183,7 +183,7 @@ static inline unsigned int xne_tau_shift_value(
   unsigned char shift
 ) {
   unsigned int res = 0;
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   res = __builtin_bitinsert(0, shift, 4, 0);
 #else
   res |= shift << 4;

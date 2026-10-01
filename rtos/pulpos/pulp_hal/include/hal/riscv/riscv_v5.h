@@ -168,7 +168,8 @@ static inline unsigned int hal_core_id() {
 }
 
 static inline unsigned int hal_cluster_id() {
-#ifdef __cv32e40p__
+/* cluster_id() reads the very CSR the builtin reads, so it is exact. */
+#if defined(__cv32e40p__) || defined(PULP_NO_XPULP)
   return cluster_id();   // no __builtin_pulp_* in the CoreV toolchain
 #else
   //return cluster_id();
@@ -515,9 +516,9 @@ static inline void cpu_stack_check_disable()
 
 
 
-/* Skipped entirely under COREV_V2: builtins_corev_v2.h already defines these. */
+/* Skipped under COREV_V2, which defines these, and under PULP_NO_XPULP. */
 #if defined(ARCHI_CORE_HAS_COREV_V2)
-#elif !defined(RV_ISA_RV32)
+#elif !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
 
 /* Packing of scalars into vectors */
 #define __builtin_pack2(x, y)    __builtin_pulp_pack2((signed short)   (x), (signed short)   (y))

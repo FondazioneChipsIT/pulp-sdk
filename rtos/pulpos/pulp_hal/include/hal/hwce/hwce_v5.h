@@ -27,7 +27,7 @@
 #define NB_HWCE 1
 
 // if defined, use builtin bitinsert -- otherwise, implement in SW (slower :)
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
   #define __hwce_bitinsert __builtin_bitinsert
 #else
   #define __hwce_bitinsert(a,b,c,d) (a | (((b << (32-c)) >> (32-c)) << d))
@@ -40,7 +40,7 @@
 // instead of classic load/store because otherwise the compiler is not able to correctly factorize
 // the HWCE base in case several accesses are done, ending up with twice more code
 
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
 #define HWCE_WRITE(value, offset) __builtin_pulp_OffsetedWrite(value, (int *)HWCE_ADDR_BASE, offset)
 #define HWCE_READ(offset) __builtin_pulp_OffsetedRead((int *)HWCE_ADDR_BASE, offset)
 #else

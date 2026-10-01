@@ -31,7 +31,7 @@
 // instead of classic load/store because otherwise the compiler is not able to correctly factorize
 // the HWME base in case several accesses are done, ending up with twice more code
 
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
+#if defined(__riscv__) && !defined(RV_ISA_RV32) && !defined(PULP_NO_XPULP)
 #define IMA_WRITE(value, offset) __builtin_pulp_OffsetedWrite(value, (int *)IMA_ADDR_BASE, offset)
 #define IMA_READ(offset) __builtin_pulp_OffsetedRead((int *)IMA_ADDR_BASE, offset)
 #else
