@@ -11,7 +11,7 @@ REGRESSION_OUT     ?= $(REGRESSIONS)
 define run_regression
 	@test -f $(REGRESSIONS)/$(1) || { echo "No $(1) in $(REGRESSIONS) -- run 'make regression-init'"; exit 1; }
 	cd $(REGRESSIONS) && $(BWRUNTEST) --proc-verbose -v --yaml \
-		-t $(REGRESSION_TIMEOUT) --max-procs $(REGRESSION_PROCS) \
+		-t $(REGRESSION_TIMEOUT) --max-procs $(2) \
 		--report-junit --output $(REGRESSION_OUT)/$(basename $(1)).xml $(REGRESSIONS)/$(1)
 endef
 
@@ -38,34 +38,35 @@ regression-update:
 
 .PHONY: test-regression
 test-regression: regression-venv
-	$(call run_regression,pulp_cluster-subset.yaml)
+	$(call run_regression,pulp_cluster-subset.yaml, ${REGRESSION_PROCS})
 
 .PHONY: test-cluster
 test-cluster: regression-venv
-	$(call run_regression,pulp_cluster.yaml)
+	$(call run_regression,pulp_cluster.yaml, ${REGRESSION_PROCS})
 
 .PHONY: test-mchan
 test-mchan: regression-venv
-	$(call run_regression,pulp_cluster-mchan-tests.yaml)
+	$(call run_regression,pulp_cluster-mchan-tests.yaml, ${REGRESSION_PROCS})
 
 .PHONY: test-idma
+# Run with just 1 process since the same test is launched multiple times with different flags
 test-idma: regression-venv
-	$(call run_regression,idma-tests.yaml)
+	$(call run_regression, idma-tests.yaml, 1)
 
 .PHONY: test-par-bare
 test-par-bare: regression-venv
-	$(call run_regression,parallel-bare-tests.yaml)
+	$(call run_regression,parallel-bare-tests.yaml, ${REGRESSION_PROCS})
 
 .PHONY: test-fpu
 test-fpu: regression-venv
-	$(call run_regression,fpu_tests.yaml)
+	$(call run_regression,fpu_tests.yaml, ${REGRESSION_PROCS})
 
 .PHONY: test-tcdm
 test-tcdm: regression-venv
-	$(call run_regression,tcdm-tests.yaml)
+	$(call run_regression,tcdm-tests.yaml, ${REGRESSION_PROCS})
 
 # Any suite by name: make test-suite SUITE=riscv-tests.yaml
 .PHONY: test-suite
 test-suite: regression-venv
 	$(if $(SUITE),,$(error Set SUITE, e.g. make test-suite SUITE=riscv-tests.yaml))
-	$(call run_regression,$(SUITE))
+	$(call run_regression,$(SUITE), ${REGRESSION_PROCS})
