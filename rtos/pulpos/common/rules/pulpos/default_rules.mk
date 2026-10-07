@@ -44,6 +44,15 @@ endif
 endif
 endif
 
+VENV := venv
+
+export PATH := $(abspath $(VENV))/bin:$(PATH)
+
+venv:
+	python3 -m venv $(VENV) && \
+	$(VENV)/bin/python -m pip install -U pip && \
+	$(VENV)/bin/python -m pip install -r $(PULP_SDK_HOME)/tools/gapy/requirements.txt
+
 VPATH = $(PULPOS_HOME) $(PULPOS_MODULES)
 
 include $(PULPOS_HOME)/rules/pulpos/src.mk
