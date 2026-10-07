@@ -17,7 +17,8 @@ ifdef USE_CV32E40P
 
 PULP_CV32_PREFIX := $(if $(wildcard $(PULP_RISCV_GCC_TOOLCHAIN)/bin/riscv32-unknown-elf-gcc),riscv32-unknown-elf,riscv64-unknown-elf)
 PULP_CV32_GCC    := $(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(PULP_CV32_PREFIX)-gcc
-PULP_CV32_MARCH  := -march=rv32imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx  -mabi=ilp32
+
+PULP_CV32_MARCH  := -march=rv32imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinx  -mabi=ilp32
 PULP_CV32_TUNE   := $(shell $(PULP_CV32_GCC) -mtune=cv32e40p -E -x c /dev/null >/dev/null 2>&1 && echo -mtune=cv32e40p)
 
 PULP_ARCH_CFLAGS ?=  $(PULP_CV32_MARCH) $(PULP_CV32_TUNE)
