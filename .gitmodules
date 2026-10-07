@@ -2,4 +2,4 @@
 [submodule "regression_tests"]
 	path = regression_tests
 	url = https://github.com/FondazioneChipsIT/regression_tests.git
-	branch = pr/pulp_sdk_port
+	branch = chips-it
