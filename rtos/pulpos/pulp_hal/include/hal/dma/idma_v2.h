@@ -11,6 +11,10 @@
 #define IDMA_ID_COUNTER_WIDTH 32
 #define IDMA_ID_MASK 0xffffffff
 
+// Masks for clock gating control (bit offset is 17)
+#define IDMA_CLK_ENABLE_MASK 0x00020000
+#define IDMA_CLK_DISABLE_MASK 0xfffdffff
+
 typedef enum {
     IDMA_PROT_AXI = 0, // AXI protocol: L2 memory
     IDMA_PROT_OBI = 1, // OBI protocol: L1 memory
@@ -385,13 +389,13 @@ static inline void pulp_idma_transfer_2d_and_wait(unsigned int direction, unsign
 static inline void plp_idma_enable_clk() {
   uint32_t cluster_ctrl_cfg_reg;
   cluster_ctrl_cfg_reg = plp_ctrl_cluster_cfg_get();
-  plp_ctrl_cluster_cfg_set(cluster_ctrl_cfg_reg | (1 << 17));
+  plp_ctrl_cluster_cfg_set(cluster_ctrl_cfg_reg | IDMA_CLK_ENABLE_MASK);
 }
 
 static inline void plp_idma_disable_clk() {
   uint32_t cluster_ctrl_cfg_reg;
   cluster_ctrl_cfg_reg = plp_ctrl_cluster_cfg_get();
-  plp_ctrl_cluster_cfg_set(cluster_ctrl_cfg_reg & (0 << 17));
+  plp_ctrl_cluster_cfg_set(cluster_ctrl_cfg_reg & IDMA_CLK_DISABLE_MASK);
 }
 
 #endif
