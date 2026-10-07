@@ -22,36 +22,50 @@ regression-init:
 # Fast-forward to the tip of the tracked branch. --remote must not recurse, or it
 # also moves the nested pins (pulp-nnx, redmule-golden-model) off their commits.
 .PHONY: regression-update
+
+VENV := venv
+
+export PATH := $(abspath $(VENV))/bin:$(PATH)
+
+regression-venv:
+	python3 -m venv $(VENV) && \
+	$(VENV)/bin/python -m pip install -U pip && \
+	$(VENV)/bin/python -m pip install junit-xml pyyaml prettytable pyelftools
+
 regression-update:
 	git submodule update --init --remote -- $(REGRESSIONS)
 	git -C $(REGRESSIONS) submodule update --init --recursive
 
 .PHONY: test-regression
-test-regression:
+test-regression: regression-venv
 	$(call run_regression,pulp_cluster-subset.yaml)
 
 .PHONY: test-cluster
-test-cluster:
+test-cluster: regression-venv
 	$(call run_regression,pulp_cluster.yaml)
 
 .PHONY: test-mchan
-test-mchan:
+test-mchan: regression-venv
 	$(call run_regression,pulp_cluster-mchan-tests.yaml)
 
+.PHONY: test-idma
+test-idma: regression-venv
+	$(call run_regression,idma-tests.yaml)
+
 .PHONY: test-par-bare
-test-par-bare:
+test-par-bare: regression-venv
 	$(call run_regression,parallel-bare-tests.yaml)
 
 .PHONY: test-fpu
-test-fpu:
+test-fpu: regression-venv
 	$(call run_regression,fpu_tests.yaml)
 
 .PHONY: test-tcdm
-test-tcdm:
+test-tcdm: regression-venv
 	$(call run_regression,tcdm-tests.yaml)
 
 # Any suite by name: make test-suite SUITE=riscv-tests.yaml
 .PHONY: test-suite
-test-suite:
+test-suite: regression-venv
 	$(if $(SUITE),,$(error Set SUITE, e.g. make test-suite SUITE=riscv-tests.yaml))
 	$(call run_regression,$(SUITE))
