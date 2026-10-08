@@ -247,9 +247,13 @@ the pyyaml library which is not installed.""",
             exit(1)
         with open(args.test_file) as f:
             testyaml = yaml.load(f, Loader=yaml.Loader)
+            platform = os.environ.get("platform", "rtl")
             for testsetname, testv in testyaml.items():
                 for testname, insn in testv.items():
-                    cmd = shlex.split(insn['command'])
+                    platforms = insn.get("platforms")
+                    if platforms is not None and platform not in platforms:
+                        continue
+                    cmd = shlex.split(os.path.expandvars(insn['command']))
                     cwd = insn['path']
                     tests.append((testsetname + ':' + testname, cwd, cmd))
             if args.verbose:

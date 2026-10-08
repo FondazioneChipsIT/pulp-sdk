@@ -30,7 +30,7 @@ export PATH := $(abspath $(VENV))/bin:$(PATH)
 regression-venv:
 	python3 -m venv $(VENV) && \
 	$(VENV)/bin/python -m pip install -U pip && \
-	$(VENV)/bin/python -m pip install junit-xml pyyaml prettytable pyelftools
+	$(VENV)/bin/python -m pip install junit-xml pyyaml -r tools/gapy/requirements.txt
 
 regression-update:
 	git submodule update --init --remote -- $(REGRESSIONS)
@@ -51,7 +51,7 @@ test-mchan: regression-venv
 .PHONY: test-idma
 # Run with just 1 process since the same test is launched multiple times with different flags
 test-idma: regression-venv
-	$(call run_regression, idma-tests.yaml, 1)
+	$(call run_regression,idma-tests.yaml, 1)
 
 .PHONY: test-par-bare
 test-par-bare: regression-venv
