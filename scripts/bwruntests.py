@@ -318,6 +318,7 @@ the pyyaml library which is not installed.""",
         testcount = sum(1 for x in tests)
         testfailcount = sum(1 for p in procresults if p.returncode != 0)
         testpassedcount = testcount - testfailcount
+        status = "CI_FAILURE" if testfailcount > 0 else "CI_SUCCESS"
         resulttable = PrettyTable(['test', 'time', 'passed/total'])
         resulttable.align['test'] = "l"
         resulttable.add_row(['bwruntest', '', '{0:d}/{1:d}'.
@@ -328,4 +329,5 @@ the pyyaml library which is not installed.""",
             resulttable.add_row([testname,
                                  '{0:.2f}s'.format(p.time),
                                  '{0:d}/{1:d}'.format(testpassed, 1)])
+        resulttable.add_row([status, '', ''])
         print(resulttable)
