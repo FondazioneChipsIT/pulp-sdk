@@ -34,6 +34,7 @@ void __pi_ram_conf_init(struct pi_ram_conf *conf)
 }
 
 
+#ifndef ARCHI_NO_FC
 static void __pi_ram_cluster_req_done(void *_req)
 {
     pi_cl_ram_req_t *req = (pi_cl_ram_req_t *)_req;
@@ -49,7 +50,45 @@ static void __pi_ram_cluster_req(void *_req)
     else
   	pi_ram_copy_async(req->device, req->pi_ram_addr, req->addr, req->size, req->ext2loc, pi_task_callback(&req->event, __pi_ram_cluster_req_done, (void *)req));
 }
+#endif
 
+
+#ifdef ARCHI_NO_FC
+
+// No FC to forward to: the calling core (core 0, the FC stand-in) serves the
+// request in place, then *_wait() returns at once. Call from one core at a time.
+
+void pi_cl_ram_copy(struct pi_device *device,
+                 uint32_t pi_ram_addr, void *addr, uint32_t size, int ext2loc, pi_cl_ram_req_t *req)
+{
+    pi_task_t task;
+    pi_ram_copy_async(device, pi_ram_addr, addr, size, ext2loc, pi_task_block(&task));
+    pi_task_wait_on(&task);
+    req->done = 1;
+}
+
+void pi_cl_ram_copy_2d(struct pi_device *device,
+                    uint32_t pi_ram_addr, void *addr, uint32_t size, uint32_t stride, uint32_t length, int ext2loc, pi_cl_ram_req_t *req)
+{
+    pi_task_t task;
+    pi_ram_copy_2d_async(device, pi_ram_addr, addr, size, stride, length, ext2loc, pi_task_block(&task));
+    pi_task_wait_on(&task);
+    req->done = 1;
+}
+
+void pi_cl_ram_alloc(struct pi_device *device, uint32_t size, pi_cl_ram_alloc_req_t *req)
+{
+    req->error = pi_ram_alloc(device, &req->result, size);
+    req->done = 1;
+}
+
+void pi_cl_ram_free(struct pi_device *device, uint32_t chunk, uint32_t size, pi_cl_ram_free_req_t *req)
+{
+    req->error = pi_ram_free(device, chunk, size);
+    req->done = 1;
+}
+
+#else
 
 void pi_cl_ram_copy(struct pi_device *device,
                  uint32_t pi_ram_addr, void *addr, uint32_t size, int ext2loc, pi_cl_ram_req_t *req)
@@ -123,3 +162,5 @@ void pi_cl_ram_free(struct pi_device *device, uint32_t chunk, uint32_t size, pi_
     pi_task_callback(&req->event, __pi_ram_free_cluster_req, (void *) req);
     pi_cl_send_task_to_fc(&(req->event));
 }
+
+#endif

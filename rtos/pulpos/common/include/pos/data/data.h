@@ -53,6 +53,11 @@
 
 #define PI_L2 __attribute__((section(".l2_data")))
 
+#ifdef ARCHI_HAS_L3_MM
+// Initialised data in the memory-mapped L3, loaded with the ELF
+#define PI_L3 __attribute__((section(".l3_data")))
+#endif
+
 #if defined(ARCHI_HAS_L1_ALIAS) && defined(CONFIG_NO_STD_RELOC)
 #define PI_CL_L1_TINY __attribute__ ((tiny)) __attribute__((section(".data_tiny_l1")))
 #else

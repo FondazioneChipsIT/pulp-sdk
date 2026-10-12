@@ -49,6 +49,11 @@ CONFIG_BSP = 1
 CONFIG_HYPER = 1
 endif
 
+# Memory-mapped RAM (iDMA-staged); no board/pad setup, so no CONFIG_BSP
+ifeq '$(CONFIG_MMRAM)' '1'
+PULP_SRCS += $(BSP_RAM_SRC) $(BSP_MMRAM_SRC)
+endif
+
 ifeq '$(CONFIG_READFS)' '1'
 PULP_SRCS += $(BSP_READFS_SRC)
 CONFIG_FS = 1

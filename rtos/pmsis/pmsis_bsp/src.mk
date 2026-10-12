@@ -9,6 +9,7 @@ BSP_SPIFLASH_SRC = flash/spiflash/spiflash.c
 BSP_HYPERRAM_SRC = ram/hyperram/hyperram.c
 BSP_SPIRAM_SRC = ram/spiram/spiram.c
 BSP_RAM_SRC = ram/ram.c ram/alloc_extern.c
+BSP_MMRAM_SRC = ram/mmram/mmram.c
 BSP_OTA_SRC = ota/ota.c ota/ota_utility.c ota/updater.c
 BSP_BOOTLOADER_SRC = bootloader/bootloader_utility.c
 BSP_NINA_SRC = transport/transport.c transport/nina_w10/nina_w10.c

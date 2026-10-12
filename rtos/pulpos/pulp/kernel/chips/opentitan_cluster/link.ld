@@ -1,6 +1,10 @@
 /* chips/pulp/link.ld rebased to OT: L2 0xA0000000, L1 0xB0000000, entry 0xA0008080 */
 OUTPUT_ARCH(riscv)
 ENTRY( _start )
+
+/* L3 = cluster's HyperRAM window; override with -Wl,--defsym=__l3_base=..,--defsym=__l3_size=.. */
+__l3_base = DEFINED(__l3_base) ? __l3_base : 0x80800000;
+__l3_size = DEFINED(__l3_size) ? __l3_size : 0x00800000;
 MEMORY
 {
   L2           : ORIGIN = 0xA0000000, LENGTH = 0x0007fffc
@@ -285,4 +289,13 @@ SECTIONS
 
   __l1_heap_start = ALIGN(4);
   __l1_heap_size = LENGTH(L1) - __l1_heap_start + ORIGIN(L1);
+
+  /* Last: moves the location counter to L3. Loaded with the ELF (JTAG preload). */
+  .l3_data __l3_base : {
+    *(.l3_data)
+    *(.l3_data.*)
+  }
+  /* From SIZEOF: an empty .l3_data is dropped and would leave '.' in L1 */
+  __l3_end = ALIGN(__l3_base + SIZEOF(.l3_data), 8);
+  ASSERT(__l3_end <= __l3_base + __l3_size, "L3 region overflow")
 }

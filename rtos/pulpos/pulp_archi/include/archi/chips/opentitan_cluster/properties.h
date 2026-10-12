@@ -11,6 +11,9 @@
 // EU event raised by the mailbox RCV irq (cluster_event_map)
 #define ARCHI_CL_EVT_MBOX   22
 
+// Memory-mapped L3 (HyperRAM over AXI); bounds are the link.ld __l3_* symbols
+#define ARCHI_HAS_L3_MM     1
+
 // No FLL: fixed frequencies reported to pi_freq_get()
 #ifndef ARCHI_FPGA_SOC_FREQUENCY
 #define ARCHI_FPGA_SOC_FREQUENCY 5000000
