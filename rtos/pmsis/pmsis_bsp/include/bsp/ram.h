@@ -633,6 +633,32 @@ void pi_cl_ram_copy_2d(struct pi_device *device,
   uint32_t pi_ram_addr, void *addr, uint32_t size, uint32_t stride,
   uint32_t length, int ext2loc, pi_cl_ram_req_t *req);
 
+/** \brief Enqueue a 3D read or write copy to the RAM from cluster side.
+ *
+ * Same as pi_cl_ram_copy_2d, repeated count times. The fabric controller
+ * chains the 2D copies and notifies the cluster once, when the last one has
+ * finished, so a single request covers the whole transfer.
+ *
+ * \param device      The device descriptor of the RAM chip on which to do
+ *   the copy.
+ * \param pi_ram_addr  The address of the first 2D copy in the RAM.
+ * \param addr        The address of the first 2D copy in the processor.
+ * \param size        The size in bytes of each 2D copy.
+ * \param stride      2D stride in the RAM, as for pi_cl_ram_copy_2d.
+ * \param length      2D length, as for pi_cl_ram_copy_2d.
+ * \param count       Number of 2D copies.
+ * \param ram_outer_stride  Bytes between two 2D copies in the RAM.
+ * \param loc_outer_stride  Bytes between two 2D copies in the processor.
+ * \param ext2loc     1 if the copy is from RAM to the chip or 0 for the
+ *   contrary.
+ * \param req         A pointer to the RAM request structure. It must be
+ *   allocated by the caller and kept alive until the copy is finished.
+ */
+void pi_cl_ram_copy_3d(struct pi_device *device,
+  uint32_t pi_ram_addr, void *addr, uint32_t size, uint32_t stride,
+  uint32_t length, uint32_t count, int32_t ram_outer_stride,
+  int32_t loc_outer_stride, int ext2loc, pi_cl_ram_req_t *req);
+
 /** \brief Wait until the specified RAM request has finished.
  *
  * This blocks the calling core until the specified cluster remote copy is
@@ -683,6 +709,9 @@ struct pi_cl_ram_req_s
     unsigned char cid;
     unsigned char ext2loc;
     unsigned char is_2d;
+    uint32_t count;           // 2D copies left, including the current one (3D copies)
+    int32_t ram_outer_stride;
+    int32_t loc_outer_stride;
 };
 
 struct pi_cl_ram_alloc_req_s
