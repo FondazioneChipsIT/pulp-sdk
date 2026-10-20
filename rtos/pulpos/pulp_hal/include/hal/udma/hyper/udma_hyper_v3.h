@@ -25,12 +25,35 @@
 #include "pmsis.h"
 #include "archi/udma/hyper/udma_hyper_v3.h"
 
-/* Transaction configuration parameters
+/* Transaction configuration parameters, each can be overridden with -D
 */
+#ifndef CONFIG_HYPERFLASH_EN_LATENCY_ADD
 #define CONFIG_HYPERFLASH_EN_LATENCY_ADD 0
+#endif
+#ifndef CONFIG_HYPERRAM_EN_LATENCY_ADD
 #define CONFIG_HYPERRAM_EN_LATENCY_ADD 1
+#endif
+#ifndef CONFIG_HYPERFLASH_T_LATENCY_ACCESS
 #define CONFIG_HYPERFLASH_T_LATENCY_ACCESS 0x0f
+#endif
+/* Must match the initial latency in the HyperRAM CR0. The FMC HyperRAM of the
+ * pulp_fpga bitstreams resets to 7 clocks, the S27KS0641 model used in RTL to
+ * 6. A mismatch silently shifts writes by 4 bytes per clock (with the fixed 2x
+ * latency), while reads still look fine since they are RWDS-strobed.
+ */
+#ifndef CONFIG_HYPERRAM_T_LATENCY_ACCESS
+#ifdef __PLATFORM_FPGA__
+#define CONFIG_HYPERRAM_T_LATENCY_ACCESS 0x07
+#else
 #define CONFIG_HYPERRAM_T_LATENCY_ACCESS 0x06
+#endif
+#endif
+
+/* MEM_SEL values. The controller has no chip-select register: the chip select
+ * follows MEM_SEL, CSN0 for HyperFlash and CSN1 for HyperRAM/PSRAM.
+ */
+#define HYPER_MEM_SEL_RAM   0
+#define HYPER_MEM_SEL_FLASH 1
 
 static inline int plp_hyper_get_reg(unsigned int offset){
   return pulp_read32(offset);

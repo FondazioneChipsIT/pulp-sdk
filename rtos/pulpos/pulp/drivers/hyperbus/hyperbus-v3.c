@@ -30,12 +30,12 @@ static void pos_hyper_setup(pos_hyper_t *hyper)
 {
   if (hyper->type == PI_HYPER_TYPE_FLASH)
   {
-    plp_hyper_setup(hyper->hyper_id, CONFIG_HYPERFLASH_EN_LATENCY_ADD, hyper->cs, CONFIG_HYPERFLASH_T_LATENCY_ACCESS);
+    plp_hyper_setup(hyper->hyper_id, CONFIG_HYPERFLASH_EN_LATENCY_ADD, HYPER_MEM_SEL_FLASH, CONFIG_HYPERFLASH_T_LATENCY_ACCESS);
     plp_hyper_set_reg(UDMA_HYPER_BASE_ADDR(0) + REG_PAGE_BOUND, 0x04);
   }
   else if (hyper->type == PI_HYPER_TYPE_RAM)
   {
-    plp_hyper_setup(hyper->hyper_id, CONFIG_HYPERRAM_EN_LATENCY_ADD, hyper->cs, CONFIG_HYPERRAM_T_LATENCY_ACCESS);
+    plp_hyper_setup(hyper->hyper_id, CONFIG_HYPERRAM_EN_LATENCY_ADD, HYPER_MEM_SEL_RAM, CONFIG_HYPERRAM_T_LATENCY_ACCESS);
     plp_hyper_set_reg(UDMA_HYPER_BASE_ADDR(0) + REG_PAGE_BOUND, 0x03);
   }
 }
@@ -53,60 +53,100 @@ static void pos_hyper_wait_done(pos_hyper_t *hyper)
   }
 }
 
-void pos_hyper_enqueue(pos_udma_channel_t *channel, pi_task_t *task, uint32_t offset, uint32_t buffer, uint32_t size, uint32_t cfg)
+// A copy keeps all its parameters in its task until it starts:
+// data[0] L2 address, data[1] size, data[2] HyperBus address, data[3] flags,
+// data[4] 2D length, data[5] 2D stride, data[6] pos_hyper_t.
+#define POS_HYPER_RX      (1 << 0)
+#define POS_HYPER_TWD_EXT (1 << 1) // 2D on the HyperBus side
+#define POS_HYPER_TWD_L2  (1 << 2) // 2D on the L2 side
+
+// Allocate the transaction ID and program its registers only when the copy
+// starts. TRANS_ID_ALLOC returns the smallest ID with no transfer running, so
+// an ID taken for a copy that is still queued would be handed out again, and
+// the next copy would overwrite the queued copy's address and 2D registers.
+static void pos_hyper_launch(pi_task_t *task)
 {
-    // A UDMA channel has 2 slots, enqueue the copy to the UDMA if one of them is available, otherwise
-    // put the transfer on hold.
-    if (channel->pendings[0] == NULL)
-    {
-        channel->pendings[0] = task;
-        plp_hyper_enqueue(offset, buffer, size, UDMA_CHANNEL_CFG_EN | cfg);
-    }
-    else if (channel->pendings[1] == NULL)
-    {
-        channel->pendings[1] = task;
-        plp_hyper_enqueue(offset, buffer, size, UDMA_CHANNEL_CFG_EN | cfg);
-    }
+  pos_hyper_t *hyper = (pos_hyper_t *)task->data[6];
+  uint32_t flags = task->data[3];
+  int rx = flags & POS_HYPER_RX;
+
+  unsigned int twd_cmd[HYPER_NB_TWD_REGS] = {
+    (flags & POS_HYPER_TWD_EXT) ? 1 : 0, task->data[4], task->data[5],
+    (flags & POS_HYPER_TWD_L2) ? 1 : 0, task->data[4], task->data[5]};
+  unsigned int ctl_cmd[HYPER_NB_CTL_REGS] = {rx ? 0x5 : 0x1, task->data[2]};
+
+  pos_hyper_setup(hyper);
+
+  int tran_id = plp_hyper_id_alloc(hyper->hyper_id);
+  hyper->tran_id = tran_id;
+
+  plp_hyper_set_twd_param(hyper->hyper_id, twd_cmd, tran_id);
+  plp_hyper_set_ctl_param(hyper->hyper_id, ctl_cmd, tran_id);
+
+  uint32_t channel = UDMA_HYPER_BASE_ADDR(hyper->hyper_id) +
+    (rx ? UDMA_HYPER_CHANNEL_RX(tran_id) : UDMA_HYPER_CHANNEL_TX(tran_id));
+  plp_hyper_enqueue(channel, task->data[0], task->data[1], UDMA_CHANNEL_CFG_EN | UDMA_CHANNEL_CFG_SIZE_8);
+}
+
+// One copy in flight in total, reads and writes share this queue: the
+// end-of-transfer event (RX or TX) then always belongs to pendings[0], and a
+// read and a write never share a transaction ID. Each ID has one set of 2D and
+// command registers, so a write kicked while a read runs on the same ID breaks
+// the queued transfer (seen on GVSoC with many small double-buffered tiles).
+// The HyperBus serves one transfer at a time anyway. Later copies wait in a FIFO.
+static void pos_hyper_enqueue(pos_udma_channel_t *channel, pi_task_t *task)
+{
+  int irq = hal_irq_disable();
+
+  if (channel->pendings[0] == NULL)
+  {
+    channel->pendings[0] = task;
+    pos_hyper_launch(task);
+  }
+  else
+  {
+    task->next = NULL;
+    if (channel->waitings_first == NULL)
+      channel->waitings_first = task;
     else
-    {
-        task->data[0] = buffer;
-        task->data[1] = size;
-        task->data[2] = cfg;
+      channel->waitings_last->next = task;
+    channel->waitings_last = task;
+  }
 
-        task->data[3] = offset;
-
-        if (channel->waitings_first == NULL)
-            channel->waitings_first = task;
-        else
-            channel->waitings_last->next = task;
-
-        channel->waitings_last = task;
-        task->next = NULL;
-    }
+  hal_irq_restore(irq);
 }
 
 void pos_hyper_handle_copy(int event, void *arg)
 {
     pos_udma_channel_t *channel = arg;
 
-    pi_task_t *pending_1 = channel->pendings[1];
-    pi_task_t *pending_0 = channel->pendings[0];
-    pi_task_t *pending_first = channel->waitings_first;
-    channel->pendings[0] = pending_1;
+    pi_task_t *done = channel->pendings[0];
+    pi_task_t *next = channel->waitings_first;
 
-    if (pending_first)
+    channel->pendings[0] = next;
+    if (next)
     {
-        channel->waitings_first = pending_first->next;
-        channel->pendings[1] = pending_first;
-
-        plp_hyper_enqueue(pending_first->data[3], pending_first->data[0], pending_first->data[1], UDMA_CHANNEL_CFG_EN | pending_first->data[2]);
-    }
-    else
-    {
-        channel->pendings[1] = NULL;
+        channel->waitings_first = next->next;
+        pos_hyper_launch(next);
     }
 
-    pos_task_push_locked(pending_0);
+    pos_task_push_locked(done);
+}
+
+static void pos_hyper_copy_async(struct pi_device *device, uint32_t flags, uint32_t hyper_addr, void *addr,
+                                 uint32_t size, uint32_t length, uint32_t stride, struct pi_task *task)
+{
+  pos_hyper_t *hyper = (pos_hyper_t *)device->data;
+
+  task->data[0] = (uint32_t)addr;
+  task->data[1] = size;
+  task->data[2] = hyper_addr;
+  task->data[3] = flags;
+  task->data[4] = length;
+  task->data[5] = stride;
+  task->data[6] = (uint32_t)hyper;
+
+  pos_hyper_enqueue(hyper->rx_channel, task);
 }
 
 void pos_hyper_create_channel(pos_udma_channel_t *channel, int channel_id, int soc_event)
@@ -150,6 +190,8 @@ int32_t pi_hyper_open(struct pi_device *device)
   {
     pos_hyper_create_channel(hyper->rx_channel, UDMA_CHANNEL_ID(periph_id), hyper_channel + ARCHI_UDMA_HYPER_EOT_RX_EVT);
     pos_hyper_create_channel(hyper->tx_channel, UDMA_CHANNEL_ID(periph_id)+1, hyper_channel + ARCHI_UDMA_HYPER_EOT_TX_EVT);
+    // Writes complete through the same shared queue as reads
+    pos_soc_event_register_callback(hyper_channel + ARCHI_UDMA_HYPER_EOT_TX_EVT, pos_hyper_handle_copy, (void *)hyper->rx_channel);
   }
 
   hyper_open_count++;
@@ -277,19 +319,7 @@ void pi_hyper_read(struct pi_device *device, uint32_t hyper_addr, void *addr, ui
 
 void pi_hyper_read_async(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, struct pi_task *task)
 {
-  pos_hyper_t *hyper = (pos_hyper_t *)device->data;
-
-  unsigned int twd_cmd[HYPER_NB_TWD_REGS] = {0,0,0,0,0,0};
-  unsigned int ctl_cmd[HYPER_NB_CTL_REGS] = {0x5, hyper_addr};
-
-  pos_hyper_setup(hyper);
-
-  hyper->tran_id = plp_hyper_id_alloc(hyper->hyper_id);
-
-  pi_hyper_set_regs(device, PI_HYPER_TWD, (unsigned int *)twd_cmd);
-  pi_hyper_set_regs(device, PI_HYPER_CTL, (unsigned int *)ctl_cmd);
-
-  pos_hyper_enqueue(hyper->rx_channel, task, UDMA_HYPER_BASE_ADDR(hyper->hyper_id) + UDMA_HYPER_CHANNEL_RX(hyper->tran_id), (uint32_t)addr, size, UDMA_CHANNEL_CFG_SIZE_8);
+  pos_hyper_copy_async(device, POS_HYPER_RX, hyper_addr, addr, size, 0, 0, task);
 }
 
 void pi_hyper_read_2d(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, uint32_t stride, uint32_t length)
@@ -301,36 +331,13 @@ void pi_hyper_read_2d(struct pi_device *device, uint32_t hyper_addr, void *addr,
 
 void pi_hyper_read_2d_async(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, uint32_t stride, uint32_t length, struct pi_task *task)
 {
-  pos_hyper_t *hyper = (pos_hyper_t *)device->data;
-
-  unsigned int twd_cmd[HYPER_NB_TWD_REGS] = {1,length,stride,0,length,stride};
-  unsigned int ctl_cmd[HYPER_NB_CTL_REGS] = {0x5, hyper_addr};
-
-  pos_hyper_setup(hyper);
-
-  hyper->tran_id = plp_hyper_id_alloc(hyper->hyper_id);
-
-  pi_hyper_set_regs(device, PI_HYPER_TWD, (unsigned int *)twd_cmd);
-  pi_hyper_set_regs(device, PI_HYPER_CTL, (unsigned int *)ctl_cmd);
-
-  pos_hyper_enqueue(hyper->rx_channel, task, UDMA_HYPER_BASE_ADDR(hyper->hyper_id) + UDMA_HYPER_CHANNEL_RX(hyper->tran_id), (uint32_t)addr, size, UDMA_CHANNEL_CFG_SIZE_8);
+  pos_hyper_copy_async(device, POS_HYPER_RX | POS_HYPER_TWD_EXT, hyper_addr, addr, size, length, stride, task);
 }
 
 void pi_hyper_read_bi2d_async(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, uint32_t dir, uint32_t stride, uint32_t length, struct pi_task *task)
 {
-  pos_hyper_t *hyper = (pos_hyper_t *)device->data;
-
-  unsigned int twd_cmd[HYPER_NB_TWD_REGS] = {((0x0^dir) & 0x1),length,stride,((0x1^dir) & 0x1),length,stride};
-  unsigned int ctl_cmd[HYPER_NB_CTL_REGS] = {0x5, hyper_addr};
-
-  pos_hyper_setup(hyper);
-
-  hyper->tran_id = plp_hyper_id_alloc(hyper->hyper_id);
-
-  pi_hyper_set_regs(device, PI_HYPER_TWD, (unsigned int *)twd_cmd);
-  pi_hyper_set_regs(device, PI_HYPER_CTL, (unsigned int *)ctl_cmd);
-
-  pos_hyper_enqueue(hyper->rx_channel, task, UDMA_HYPER_BASE_ADDR(hyper->hyper_id) + UDMA_HYPER_CHANNEL_RX(hyper->tran_id), (uint32_t)addr, size, UDMA_CHANNEL_CFG_SIZE_8);
+  uint32_t twd = (dir & 0x1) ? POS_HYPER_TWD_L2 : POS_HYPER_TWD_EXT;
+  pos_hyper_copy_async(device, POS_HYPER_RX | twd, hyper_addr, addr, size, length, stride, task);
 }
 
 void pi_hyper_write(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size)
@@ -353,19 +360,7 @@ void pi_hyper_write(struct pi_device *device, uint32_t hyper_addr, void *addr, u
 
 void pi_hyper_write_async(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, struct pi_task *task)
 {
-  pos_hyper_t *hyper = (pos_hyper_t *)device->data;
-
-  unsigned int twd_cmd[HYPER_NB_TWD_REGS] = {0,0,0,0,0,0};
-  unsigned int ctl_cmd[HYPER_NB_CTL_REGS] = {0x1, hyper_addr};
-
-  pos_hyper_setup(hyper);
-
-  hyper->tran_id = plp_hyper_id_alloc(hyper->hyper_id);
-
-  pi_hyper_set_regs(device, PI_HYPER_TWD, (unsigned int *)twd_cmd);
-  pi_hyper_set_regs(device, PI_HYPER_CTL, (unsigned int *)ctl_cmd);
-
-  pos_hyper_enqueue(hyper->tx_channel, task, UDMA_HYPER_BASE_ADDR(hyper->hyper_id) + UDMA_HYPER_CHANNEL_TX(hyper->tran_id), (uint32_t)addr, size, UDMA_CHANNEL_CFG_SIZE_8);
+  pos_hyper_copy_async(device, 0, hyper_addr, addr, size, 0, 0, task);
 }
 
 void pi_hyper_write_2d(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, uint32_t stride, uint32_t length)
@@ -377,36 +372,13 @@ void pi_hyper_write_2d(struct pi_device *device, uint32_t hyper_addr, void *addr
 
 void pi_hyper_write_2d_async(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, uint32_t stride, uint32_t length, struct pi_task *task)
 {
-  pos_hyper_t *hyper = (pos_hyper_t *)device->data;
-
-  unsigned int twd_cmd[HYPER_NB_TWD_REGS] = {1,length,stride,0,length,stride};
-  unsigned int ctl_cmd[HYPER_NB_CTL_REGS] = {0x1, hyper_addr};
-
-  pos_hyper_setup(hyper);
-
-  hyper->tran_id = plp_hyper_id_alloc(hyper->hyper_id);
-
-  pi_hyper_set_regs(device, PI_HYPER_TWD, (unsigned int *)twd_cmd);
-  pi_hyper_set_regs(device, PI_HYPER_CTL, (unsigned int *)ctl_cmd);
-
-  pos_hyper_enqueue(hyper->tx_channel, task, UDMA_HYPER_BASE_ADDR(hyper->hyper_id) + UDMA_HYPER_CHANNEL_TX(hyper->tran_id), (uint32_t)addr, size, UDMA_CHANNEL_CFG_SIZE_8);
+  pos_hyper_copy_async(device, POS_HYPER_TWD_EXT, hyper_addr, addr, size, length, stride, task);
 }
 
 void pi_hyper_write_bi2d_async(struct pi_device *device, uint32_t hyper_addr, void *addr, uint32_t size, uint32_t dir, uint32_t stride, uint32_t length, struct pi_task *task)
 {
-  pos_hyper_t *hyper = (pos_hyper_t *)device->data;
-
-  unsigned int twd_cmd[HYPER_NB_TWD_REGS] = {((0x0^dir) & 0x1),length,stride,((0x1^dir) & 0x1),length,stride};
-  unsigned int ctl_cmd[HYPER_NB_CTL_REGS] = {0x1, hyper_addr};
-
-  pos_hyper_setup(hyper);
-
-  hyper->tran_id = plp_hyper_id_alloc(hyper->hyper_id);
-
-  pi_hyper_set_regs(device, PI_HYPER_TWD, (unsigned int *)twd_cmd);
-  pi_hyper_set_regs(device, PI_HYPER_CTL, (unsigned int *)ctl_cmd);
-
-  pos_hyper_enqueue(hyper->tx_channel, task, UDMA_HYPER_BASE_ADDR(hyper->hyper_id) + UDMA_HYPER_CHANNEL_TX(hyper->tran_id), (uint32_t)addr, size, UDMA_CHANNEL_CFG_SIZE_8);
+  uint32_t twd = (dir & 0x1) ? POS_HYPER_TWD_L2 : POS_HYPER_TWD_EXT;
+  pos_hyper_copy_async(device, twd, hyper_addr, addr, size, length, stride, task);
 }
 
 int pi_hyper_id_alloc(struct pi_device *device)
