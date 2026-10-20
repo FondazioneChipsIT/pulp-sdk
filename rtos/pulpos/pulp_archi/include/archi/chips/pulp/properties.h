@@ -22,8 +22,17 @@
  * FPGA
  */
 
+// pulp_fpga bitstreams (ZCU102, VCU118) clock FC, cluster and peripherals at 10 MHz
 #ifndef ARCHI_FPGA_FREQUENCY
-#define ARCHI_FPGA_FREQUENCY 5000000
+#define ARCHI_FPGA_FREQUENCY 10000000
+#endif
+
+#ifndef ARCHI_FPGA_FC_FREQUENCY
+#define ARCHI_FPGA_FC_FREQUENCY 10000000
+#endif
+
+#ifndef ARCHI_FPGA_CL_FREQUENCY
+#define ARCHI_FPGA_CL_FREQUENCY 10000000
 #endif
 
 /*

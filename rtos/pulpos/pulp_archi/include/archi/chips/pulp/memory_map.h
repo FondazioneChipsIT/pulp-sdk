@@ -29,6 +29,9 @@
 #define ARCHI_L2_PRIV1_ADDR  0x1c008000
 #define ARCHI_L2_PRIV1_SIZE  0x00008000
 
+// The RTL maps L2 up to 0x1C090000, but the uDMA addresses L2 with 19 bits
+// (pulp_soc L2_AWIDTH_NOAL): above 0x1C080000 its accesses wrap onto the
+// private banks, so HyperRAM copies there corrupt FC data. Stop at 512 KB.
 #define ARCHI_L2_SHARED_ADDR  0x1c010000
 #define ARCHI_L2_SHARED_SIZE  0x00070000
 
