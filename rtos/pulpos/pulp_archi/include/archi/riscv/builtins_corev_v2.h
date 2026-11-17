@@ -56,6 +56,13 @@ static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsi
 #define __MAX2(x, y)  __cv_v2s_of_u(__builtin_riscv_cv_simd_max_h (__cv_u_of_v2s(x), __cv_u_of_v2s(y)))
 #define __MAXU2(x, y) __cv_v2u_of_u(__builtin_riscv_cv_simd_maxu_h(__cv_u_of_v2u(x), __cv_u_of_v2u(y)))
 #define __MIN2(x, y)  __cv_v2s_of_u(__builtin_riscv_cv_simd_min_h (__cv_u_of_v2s(x), __cv_u_of_v2s(y)))
+
+/* Packed 16-bit float (Xcvhv / Xcvbfv): two _Float16 (v2h) or two __bf16 (v2ah) in one register; the elementwise
+ * builtins become cv.vfmin.h / cv.vfmin.bf16 (same names as the pulp-gcc side in builtins_v2.h). */
+typedef _Float16 v2h  __attribute__((vector_size (4)));
+typedef __bf16   v2ah __attribute__((vector_size (4)));
+#define __FMIN2(x, y)  __builtin_elementwise_minnum((x), (y))
+#define __FMAX2(x, y)  __builtin_elementwise_maxnum((x), (y))
 #define __MINU2(x, y) __cv_v2u_of_u(__builtin_riscv_cv_simd_minu_h(__cv_u_of_v2u(x), __cv_u_of_v2u(y)))
 
 #define __ABS2(x) __cv_v2s_of_u(__builtin_riscv_cv_simd_abs_h(__cv_u_of_v2s(x)))

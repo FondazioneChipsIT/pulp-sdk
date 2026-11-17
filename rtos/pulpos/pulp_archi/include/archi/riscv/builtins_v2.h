@@ -64,6 +64,17 @@
 #define __MINU2(x, y) 		__builtin_pulp_minu2((x), (y))
 #define __MINU4(x, y) 		__builtin_pulp_minu4((x), (y))
 
+/* Packed 16-bit float (Xfvec): two float16 (v2h) or two float16alt (v2ah) in one register. pulp-gcc has no
+ * builtin for the vector min/max, only the instruction; __FMIN2/__FMAX2 pick the form from the operand type. */
+typedef float16    v2h  __attribute__((vector_size (4)));
+typedef float16alt v2ah __attribute__((vector_size (4)));
+static inline v2h  __vfmin2_h (v2h a, v2h b)   { v2h r;  __asm__ ("vfmin.h %0, %1, %2"  : "=r"(r) : "r"(a), "r"(b)); return r; }
+static inline v2ah __vfmin2_ah(v2ah a, v2ah b) { v2ah r; __asm__ ("vfmin.ah %0, %1, %2" : "=r"(r) : "r"(a), "r"(b)); return r; }
+static inline v2h  __vfmax2_h (v2h a, v2h b)   { v2h r;  __asm__ ("vfmax.h %0, %1, %2"  : "=r"(r) : "r"(a), "r"(b)); return r; }
+static inline v2ah __vfmax2_ah(v2ah a, v2ah b) { v2ah r; __asm__ ("vfmax.ah %0, %1, %2" : "=r"(r) : "r"(a), "r"(b)); return r; }
+#define __FMIN2(x, y) 		_Generic((x), v2h: __vfmin2_h, v2ah: __vfmin2_ah)((x), (y))
+#define __FMAX2(x, y) 		_Generic((x), v2h: __vfmax2_h, v2ah: __vfmax2_ah)((x), (y))
+
 /* Clip */
 #define __CLIP(x, precision) 	__builtin_pulp_clip((x), -(1<<(precision)), (1<<precision)-1)
 #define __CLIP_R(x, bound) 		__builtin_pulp_clip_r((x), (bound))
