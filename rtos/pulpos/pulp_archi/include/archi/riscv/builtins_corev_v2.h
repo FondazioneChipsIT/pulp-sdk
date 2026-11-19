@@ -63,6 +63,7 @@ typedef _Float16 v2h  __attribute__((vector_size (4)));
 typedef __bf16   v2ah __attribute__((vector_size (4)));
 #define __FMIN2(x, y)  __builtin_elementwise_minnum((x), (y))
 #define __FMAX2(x, y)  __builtin_elementwise_maxnum((x), (y))
+#define __VSHUFFLE2(x, y, i, j)  __builtin_shufflevector((x), (y), (i), (j))
 #define __MINU2(x, y) __cv_v2u_of_u(__builtin_riscv_cv_simd_minu_h(__cv_u_of_v2u(x), __cv_u_of_v2u(y)))
 
 #define __ABS2(x) __cv_v2s_of_u(__builtin_riscv_cv_simd_abs_h(__cv_u_of_v2s(x)))

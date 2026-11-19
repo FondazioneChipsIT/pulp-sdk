@@ -75,6 +75,10 @@ static inline v2ah __vfmax2_ah(v2ah a, v2ah b) { v2ah r; __asm__ ("vfmax.ah %0, 
 #define __FMIN2(x, y) 		_Generic((x), v2h: __vfmin2_h, v2ah: __vfmin2_ah)((x), (y))
 #define __FMAX2(x, y) 		_Generic((x), v2h: __vfmax2_h, v2ah: __vfmax2_ah)((x), (y))
 
+/* Lane shuffle of two packed 16-bit vectors: lanes i, j (0..3) of the concatenation {y, x}; gcc has no
+ * __builtin_shufflevector, its __builtin_shuffle takes the lane indices as a vector mask */
+#define __VSHUFFLE2(x, y, i, j) 	__builtin_shuffle((x), (y), (v2s){(i), (j)})
+
 /* Clip */
 #define __CLIP(x, precision) 	__builtin_pulp_clip((x), -(1<<(precision)), (1<<precision)-1)
 #define __CLIP_R(x, bound) 		__builtin_pulp_clip_r((x), (bound))
